@@ -21,7 +21,6 @@ func NewProof(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 
 	target.Lsh(target, uint(256-Difficulty))
-
 	return &ProofOfWork{b, target}
 }
 
@@ -56,6 +55,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 			nonce++
 		}
 	}
+	fmt.Println()
 
 	return nonce, hash[:]
 }
