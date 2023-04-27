@@ -42,7 +42,7 @@ free:
 	fmt.Println("Server shutdown")
 }
 
-func (s *Server) initTransports() {
+func (s *Server) InitTransports() {
 	for _, tr := range s.Transports {
 		go func(tr Transport) {
 			for rpc := range tr.Consume() {
