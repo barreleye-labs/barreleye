@@ -24,7 +24,7 @@ func NewServer(opts ServerOpts) *Server {
 }
 
 func (s *Server) Start() {
-	s.initTransports()
+	s.InitTransports()
 	ticker := time.NewTicker(5 * time.Second)
 
 free:

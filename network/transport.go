@@ -3,7 +3,7 @@ package network
 type NetAddr string
 
 type RPC struct {
-	From    string
+	From    NetAddr
 	Payload []byte
 }
 
