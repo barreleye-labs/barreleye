@@ -26,14 +26,17 @@ type Server struct {
 
 func NewServer(opts ServerOpts) *Server {
 	return &Server{
-		ServerOpts: opts,
-		rpcCh:      make(chan RPC),
-		quitCh:     make(chan struct{}, 1),
+		ServerOpts:  opts,
+		blockTime: 	 opts.BlockTime,
+		memPool: 	 NewTxPool(),
+		isValidator: opts.PrivateKey != nil,
+		rpcCh:       make(chan RPC),
+		quitCh:      make(chan struct{}, 1),
 	}
 }
 
 func (s *Server) Start() {
-	s.InitTransports()
+	s.initTransports()
 	ticker := time.NewTicker(s.blockTime)
 
 free:
@@ -45,7 +48,7 @@ free:
 			break free
 		case <-ticker.C:
 			if s.isValidator {
-				s.CreateNewBlock()
+				s.createNewBlock()
 			}
 		}
 	}
@@ -53,7 +56,7 @@ free:
 	fmt.Println("Server shutdown")
 }
 
-func (s *Server) HandleTransaction(tx *core.Transaction) error {
+func (s *Server) handleTransaction(tx *core.Transaction) error {
 	if err := tx.Verify(); err != nil {
 		return err
 	}
@@ -75,12 +78,12 @@ func (s *Server) HandleTransaction(tx *core.Transaction) error {
 	return s.memPool.Add(tx)
 }
 
-func (s *Server) CreateNewBlock() error {
+func (s *Server) createNewBlock() error {
 	fmt.Println("creating a new block")
 	return nil
 }
 
-func (s *Server) InitTransports() {
+func (s *Server) initTransports() {
 	for _, tr := range s.Transports {
 		go func(tr Transport) {
 			for rpc := range tr.Consume() {

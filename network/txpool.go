@@ -17,8 +17,12 @@ func NewTxPool() *TxPool {
 
 func (p *TxPool) Add(tx *core.Transaction) error {
 	hash := tx.Hash(core.TxHasher{})
-	p.transactions[hash] = tx
+	if p.Has(hash) {
+		return nil
+	}
 
+	p.transactions[hash] = tx
+	
 	return nil
 }
 
