@@ -50,12 +50,15 @@ func NewServer(opts ServerOpts) *Server {
 		s.RPCProcessor = s
 	}
 
+	if s.isValidator {
+		go s.validatorLoop()
+	}
+	
 	return s
 }
 
 func (s *Server) Start() {
 	s.initTransports()
-	ticker := time.NewTicker(s.BlockTime)
 
 free:
 	for {
@@ -72,14 +75,19 @@ free:
 
 		case <-s.quitCh:
 			break free
-		case <-ticker.C:
-			if s.isValidator {
-				s.createNewBlock()
-			}
 		}
 	}
 
 	fmt.Println("Server shutdown")
+}
+
+func (s *Server) validatorLoop() {
+	ticker := time.NewTicker(s.BlockTime)
+
+	for {
+		<-ticker.C
+		s.createNewBlock()
+	}
 }
 
 func (s *Server) ProcessMessage(msg *DecodedMessage) error {
