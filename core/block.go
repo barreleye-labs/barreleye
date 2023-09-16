@@ -2,8 +2,10 @@ package core
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
+	"time"
 
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/types"
@@ -14,7 +16,7 @@ type Header struct {
 	DataHash      types.Hash
 	PrevBlockHash types.Hash
 	Height        uint32
-	Timestamp     uint64
+	Timestamp     int64
 }
 
 func (h *Header) Bytes() []byte {
@@ -34,11 +36,28 @@ type Block struct {
 	hash types.Hash
 }
 
-func NewBlock(h *Header, txx []Transaction) *Block {
+func NewBlock(h *Header, txx []Transaction) (*Block, error) {
 	return &Block{
 		Header:       h,
 		Transactions: txx,
+	}, nil
+}
+
+func NewBlockFromPrevHeader(prevHeader *Header, txx []Transaction) (*Block, error) {
+	dataHash, err := CalculateDataHash(txx)
+	if err != nil {
+		return nil, err
 	}
+
+	header := &Header {
+		Version: 1,
+		Height: prevHeader.Height + 1,
+		DataHash: dataHash,
+		PrevBlockHash: BlockHasher{}.Hash(prevHeader),
+		Timestamp: time.Now().UnixNano(),
+	}
+
+	return NewBlock(header, txx)
 }
 
 func (b *Block) AddTransaction(tx *Transaction) {
@@ -71,6 +90,15 @@ func (b *Block) Verify() error {
 			return err
 		}
 	}
+
+	dataHash, err := CalculateDataHash(b.Transactions)
+	if err != nil {
+		return err
+	}
+	if dataHash != b.DataHash {
+		return fmt.Errorf("block (%s) has an invalid data hash", b.Hash(BlockHasher{}))
+	}
+
 	return nil
 }
 
@@ -88,4 +116,18 @@ func (b *Block) Hash(hasher Hasher[*Header]) types.Hash {
 	}
 
 	return b.hash
+}
+
+func CalculateDataHash(txx []Transaction) (hash types.Hash, err error) {
+	buf := &bytes.Buffer{}
+
+	for _, tx := range txx {
+		if err = tx.Encode(NewGobTxEncoder(buf)); err != nil {
+			return
+		}
+	}
+
+	hash = sha256.Sum256(buf.Bytes())
+
+	return
 }
