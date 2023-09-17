@@ -44,7 +44,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		opts.Logger = log.With(opts.Logger, "ID", opts.ID)
 	}
 
-	chain, err := core.NewBlockchain(genesisBlock())
+	chain, err := core.NewBlockchain(opts.Logger, genesisBlock())
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +147,10 @@ func (s *Server) processTransaction(tx *core.Transaction) error {
 	return s.memPool.Add(tx)
 }
 
+func (s *Server) broadcastBlock(b *core.Block) error {
+	return nil
+}
+
 func (s *Server) broadcastTx(tx *core.Transaction) error {
 	buf := &bytes.Buffer{}
 	if err := tx.Encode(core.NewGobTxEncoder(buf)); err != nil {
@@ -174,7 +178,11 @@ func (s *Server) createNewBlock() error {
 		return err
 	}
 	
-	block, err := core.NewBlockFromPrevHeader(currentHeader, nil)
+	// 우선은 멤풀에 있는 모든 트랜잭션을 블록에 담고 추후 수정 예정.
+	// 트랜잭션을 아직 구체화하지 않았기 때문.
+	txx := s.memPool.Transactions()
+
+	block, err := core.NewBlockFromPrevHeader(currentHeader, txx)
 	if err != nil {
 		return err
 	}
@@ -186,6 +194,9 @@ func (s *Server) createNewBlock() error {
 	if err := s.chain.AddBlock(block); err != nil {
 		return err
 	}
+
+	s.memPool.Flush()
+
 	return nil
 }
 
@@ -194,7 +205,7 @@ func genesisBlock() *core.Block {
 		Version: 1,
 		DataHash: types.Hash{},
 		Height: 0,
-		Timestamp: time.Now().UnixNano(),
+		Timestamp: 000000,
 	}
 
 	b, _ := core.NewBlock(header, nil)
