@@ -51,7 +51,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 	s := &Server{
 		ServerOpts:  opts,
 		chain:		 chain,
-		memPool:     NewTxPool(),
+		memPool:     NewTxPool(1000),
 		isValidator: opts.PrivateKey != nil,
 		rpcCh:       make(chan RPC),
 		quitCh:      make(chan struct{}, 1),
@@ -126,7 +126,7 @@ func (s *Server) broadcast(payload []byte) error {
 func (s *Server) processTransaction(tx *core.Transaction) error {
 	hash := tx.Hash(core.TxHasher{})
 
-	if s.memPool.Has(hash) {
+	if s.memPool.Contains(hash) {
 		return nil
 	}
 
@@ -134,17 +134,17 @@ func (s *Server) processTransaction(tx *core.Transaction) error {
 		return err
 	}
 
-	tx.SetFirstSeen(time.Now().UnixNano())
-
 	s.Logger.Log(
 		"msg", "adding new tx to mempool", 
 		"hash", hash, 
-		"mempoolLength", s.memPool.Len(),
+		"mempoolPending", s.memPool.PendingCount(),
 	)
 
 	go s.broadcastTx(tx)
 
-	return s.memPool.Add(tx)
+	s.memPool.Add(tx)
+
+	return nil
 }
 
 func (s *Server) broadcastBlock(b *core.Block) error {
@@ -180,7 +180,7 @@ func (s *Server) createNewBlock() error {
 	
 	// 우선은 멤풀에 있는 모든 트랜잭션을 블록에 담고 추후 수정 예정.
 	// 트랜잭션을 아직 구체화하지 않았기 때문.
-	txx := s.memPool.Transactions()
+	txx := s.memPool.Pending()
 
 	block, err := core.NewBlockFromPrevHeader(currentHeader, txx)
 	if err != nil {
@@ -195,7 +195,7 @@ func (s *Server) createNewBlock() error {
 		return err
 	}
 
-	s.memPool.Flush()
+	s.memPool.ClearPending()
 
 	return nil
 }
