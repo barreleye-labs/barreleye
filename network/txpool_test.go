@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/barreleye-labs/barreleye/core"
-	"github.com/barreleye-labs/barreleye/network/util"
+	"github.com/barreleye-labs/barreleye/util"
 	"github.com/stretchr/testify/assert"
 )
 
