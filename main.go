@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"math/rand"
-	"strconv"
 	"time"
 
 	"github.com/barreleye-labs/barreleye/core"
@@ -38,7 +36,7 @@ func main() {
 
 	go func() {
 		time.Sleep(7 * time.Second)
-		
+
 		trLate := network.NewLocalTransport("LATE_REMOTE")
 		trRemoteC.Connect(trLate)
 		lateServer := makeServer(string(trLate.Addr()), trLate, nil)
@@ -60,9 +58,9 @@ func initRemoteServers(trs []network.Transport) {
 }
 
 func makeServer(id string, tr network.Transport, pk *crypto.PrivateKey) *network.Server {
-	opts := network.ServerOpts {
+	opts := network.ServerOpts{
 		PrivateKey: pk,
-		ID:			id,
+		ID:         id,
 		Transports: []network.Transport{tr},
 	}
 
@@ -75,7 +73,7 @@ func makeServer(id string, tr network.Transport, pk *crypto.PrivateKey) *network
 
 func sendTransaction(tr network.Transport, to network.NetAddr) error {
 	privKey := crypto.GeneratePrivateKey()
-	data := []byte(strconv.FormatInt(int64(rand.Intn(1000000000)), 10))
+	data := []byte{0x02, 0x0a, 0x02, 0x0a, 0x0b}
 	tx := core.NewTransaction(data)
 	tx.Sign(privKey)
 	buf := &bytes.Buffer{}

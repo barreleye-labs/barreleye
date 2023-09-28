@@ -8,7 +8,7 @@ import (
 )
 
 type Blockchain struct {
-	logger	  log.Logger
+	logger    log.Logger
 	store     Storage
 	lock      sync.RWMutex
 	headers   []*Header
@@ -34,6 +34,17 @@ func (bc *Blockchain) SetValidator(v Validator) {
 func (bc *Blockchain) AddBlock(b *Block) error {
 	if err := bc.validator.ValidateBlock(b); err != nil {
 		return err
+	}
+
+	for _, tx := range b.Transactions {
+		bc.logger.Log("msg", "excuting code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
+
+		vm := NewVM(tx.Data)
+		if err := vm.Run(); err != nil {
+			return err
+		}
+
+		bc.logger.Log("vm result", vm.stack[vm.sp])
 	}
 
 	return bc.addBlockWithoutValidation(b)
@@ -67,13 +78,13 @@ func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	bc.lock.Lock()
 	bc.headers = append(bc.headers, b.Header)
 	bc.lock.Unlock()
-	
+
 	bc.logger.Log(
 		"msg", "new block",
 		"hash", b.Hash(BlockHasher{}),
 		"height", b.Height,
 		"transactions", len(b.Transactions),
-)
+	)
 
 	return bc.store.Put(b)
 }
