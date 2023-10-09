@@ -30,5 +30,5 @@ func TestVM(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, value, int64(5))
-	//
+	// 여기부터
 }
