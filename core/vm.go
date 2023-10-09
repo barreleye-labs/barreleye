@@ -1,24 +1,29 @@
 package core
 
+import (
+	"encoding/binary"
+)
+
 type Instruction byte
 
 const (
 	InstrPushInt  Instruction = 0x0a // 10
-	InstrAdd  	  Instruction = 0x0b // 1
+	InstrAdd      Instruction = 0x0b // 11
 	InstrPushByte Instruction = 0x0c
-	InstrPack	  Instruction = 0x0d
-	InstrSub	  Instruction = 0x0e
+	InstrPack     Instruction = 0x0d
+	InstrSub      Instruction = 0x0e
+	InstrStore    Instruction = 0x0f
 )
 
 type Stack struct {
 	data []any
-	sp 	 int
+	sp   int
 }
 
 func NewStack(size int) *Stack {
-	return &Stack {
+	return &Stack{
 		data: make([]any, size),
-		sp:	  0,
+		sp:   0,
 	}
 }
 
@@ -35,17 +40,20 @@ func (s *Stack) Pop() any {
 	return value
 }
 
+// F O O => pack [F, O, O]
 type VM struct {
-	data  []byte
-	ip    int // instruction pointer
-	stack *Stack
+	data          []byte
+	ip            int // instruction pointer
+	stack         *Stack
+	contractState *State
 }
 
-func NewVM(data []byte) *VM {
+func NewVM(data []byte, contractState *State) *VM {
 	return &VM{
-		data:  data,
-		ip:    0,
-		stack: NewStack(128),
+		data:          data,
+		ip:            0,
+		stack:         NewStack(128),
+		contractState: contractState,
 	}
 }
 
@@ -69,15 +77,32 @@ func (vm *VM) Run() error {
 
 func (vm *VM) Exec(instr Instruction) error {
 	switch instr {
+	case InstrStore:
+		var (
+			key             = vm.stack.Pop().([]byte)
+			value           = vm.stack.Pop()
+			serializedValue []byte
+		)
+
+		switch v := value.(type) {
+		case int:
+			serializedValue = serializeInt64(int64(v))
+		default:
+			panic("TODO: unknown type")
+		}
+
+		vm.contractState.Put(key, serializedValue)
+
 	case InstrPushInt:
-		vm.stack.Push(int(vm.data[vm.ip - 1]))
+		vm.stack.Push(int(vm.data[vm.ip-1]))
 
 	case InstrPushByte:
-		vm.stack.Push(byte(vm.data[vm.ip - 1]))
+		vm.stack.Push(byte(vm.data[vm.ip-1]))
 
 	case InstrPack:
 		n := vm.stack.Pop().(int)
 		b := make([]byte, n)
+
 		for i := 0; i < n; i++ {
 			b[i] = vm.stack.Pop().(byte)
 		}
@@ -96,4 +121,16 @@ func (vm *VM) Exec(instr Instruction) error {
 	}
 
 	return nil
+}
+
+func serializeInt64(value int64) []byte {
+	buf := make([]byte, 8)
+
+	binary.LittleEndian.PutUint64(buf, uint64(value))
+
+	return buf
+}
+
+func deserializeInt64(b []byte) int64 {
+	return int64(binary.LittleEndian.Uint64(b))
 }
