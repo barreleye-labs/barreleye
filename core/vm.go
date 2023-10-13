@@ -82,7 +82,6 @@ func (vm *VM) Exec(instr Instruction) error {
 	switch instr {
 	case InstrGet:
 		key := vm.stack.Pop().([]byte)
-
 		value, err := vm.contractState.Get(key)
 		if err != nil {
 			return err
