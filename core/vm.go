@@ -10,12 +10,12 @@ const (
 	InstrPushInt  Instruction = 0x0a // 10
 	InstrAdd      Instruction = 0x0b // 11
 	InstrPushByte Instruction = 0x0c
-	InstrPack	  Instruction = 0x0d
-	InstrSub	  Instruction = 0x0e
-	InstrStore	  Instruction = 0x0f
-	InstrGet	  Instruction = 0xae
-	InstrMul	  Instruction = 0xea
-	InstrDiv	  Instruction = 0xfd
+	InstrPack     Instruction = 0x0d
+	InstrSub      Instruction = 0x0e
+	InstrStore    Instruction = 0x0f
+	InstrGet      Instruction = 0xae
+	InstrMul      Instruction = 0xea
+	InstrDiv      Instruction = 0xfd
 )
 
 type Stack struct {

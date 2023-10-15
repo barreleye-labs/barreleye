@@ -2,6 +2,8 @@ package network
 
 import (
 	"bytes"
+	"encoding/gob"
+	"fmt"
 	"os"
 	"time"
 
@@ -14,8 +16,9 @@ import (
 var defaultBlockTime = 5 * time.Second
 
 type ServerOpts struct {
-	ID			  string
-	Logger		  log.Logger
+	ID            string
+	Transport     Transport
+	Logger        log.Logger
 	RPCDecodeFunc RPCDecodeFunc
 	RPCProcessor  RPCProcessor
 	Transports    []Transport
@@ -50,7 +53,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 	}
 	s := &Server{
 		ServerOpts:  opts,
-		chain:		 chain,
+		chain:       chain,
 		memPool:     NewTxPool(1000),
 		isValidator: opts.PrivateKey != nil,
 		rpcCh:       make(chan RPC),
@@ -66,6 +69,14 @@ func NewServer(opts ServerOpts) (*Server, error) {
 	if s.isValidator {
 		go s.validatorLoop()
 	}
+
+	// tr := s.Transports[0].(*LocalTransport)
+	// fmt.Printf("%+v\n", tr.peers)
+	// for _, tr := range s.Transports {
+	// 	if err := s.sendGetStatusMessage(tr); err != nil {
+	// 		s.Logger.Log("send get status error", err)
+	// 	}
+	// }
 
 	return s, nil
 }
@@ -111,6 +122,30 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 		return s.processTransaction(t)
 	case *core.Block:
 		return s.processBlock(t)
+	case *GetStatusMessage:
+		return s.processGetStatusMessage(msg.From, t)
+	case *StatusMessage:
+		return s.processStatusMessage(msg.From, t)
+	}
+
+	return nil
+}
+
+// TODO: Remove the Logic from the main function to here
+// Normally Transport which is our own transport should do the trick.
+func (s *Server) sendGetStatusMessage(tr Transport) error {
+	var (
+		getStatusMsg = new(GetStatusMessage)
+		buf          = new(bytes.Buffer)
+	)
+
+	if err := gob.NewEncoder(buf).Encode(getStatusMsg); err != nil {
+		return err
+	}
+
+	msg := NewMessage(MessageTypeGetStatus, buf.Bytes())
+	if err := tr.SendMessage(tr.Addr(), msg.Bytes()); err != nil {
+		return err
 	}
 
 	return nil
@@ -125,8 +160,32 @@ func (s *Server) broadcast(payload []byte) error {
 	return nil
 }
 
+func (s *Server) processStatusMessage(from NetAddr, data *StatusMessage) error {
+	fmt.Printf("=> received GetStatus response msg from %s => %+v\n", from, data)
+
+	return nil
+}
+
+func (s *Server) processGetStatusMessage(from NetAddr, data *GetStatusMessage) error {
+	fmt.Printf("=> received GetStatus msg from %s => %+v\n", from, data)
+
+	StatusMessage := &StatusMessage{
+		CurrentHeight: s.chain.Height(),
+		ID:            s.ID,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(StatusMessage); err != nil {
+		return nil
+	}
+
+	msg := NewMessage(MessageTypeStatus, buf.Bytes())
+
+	return s.Transport.SendMessage(from, msg.Bytes())
+}
+
 func (s *Server) processBlock(b *core.Block) error {
-	
+
 	if err := s.chain.AddBlock(b); err != nil {
 		return err
 	}
@@ -148,8 +207,8 @@ func (s *Server) processTransaction(tx *core.Transaction) error {
 	}
 
 	// s.Logger.Log(
-	// 	"msg", "adding new tx to mempool", 
-	// 	"hash", hash, 
+	// 	"msg", "adding new tx to mempool",
+	// 	"hash", hash,
 	// 	"mempoolPending", s.memPool.PendingCount(),
 	// )
 
@@ -166,7 +225,7 @@ func (s *Server) broadcastBlock(b *core.Block) error {
 		return err
 	}
 
-	msg := NewMessage(MessageTypeBock, buf.Bytes())
+	msg := NewMessage(MessageTypeBlock, buf.Bytes())
 
 	return s.broadcast(msg.Bytes())
 }
@@ -197,7 +256,7 @@ func (s *Server) createNewBlock() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 우선은 멤풀에 있는 모든 트랜잭션을 블록에 담고 추후 수정 예정.
 	// 트랜잭션을 아직 구체화하지 않았기 때문.
 	txx := s.memPool.Pending()
@@ -210,7 +269,7 @@ func (s *Server) createNewBlock() error {
 	if err := block.Sign(*s.PrivateKey); err != nil {
 		return err
 	}
-	
+
 	if err := s.chain.AddBlock(block); err != nil {
 		return err
 	}
@@ -223,10 +282,10 @@ func (s *Server) createNewBlock() error {
 }
 
 func genesisBlock() *core.Block {
-	header := &core.Header {
-		Version: 1,
-		DataHash: types.Hash{},
-		Height: 0,
+	header := &core.Header{
+		Version:   1,
+		DataHash:  types.Hash{},
+		Height:    0,
 		Timestamp: 000000,
 	}
 
