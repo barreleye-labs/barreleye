@@ -5,40 +5,40 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/network"
-	"github.com/sirupsen/logrus"
 )
 
+var transports = []network.Transport {
+	network.NewLocalTransport("LOCAL"),
+	network.NewLocalTransport("REMOTE_A"),
+	network.NewLocalTransport("REMOTE_B"),
+	network.NewLocalTransport("REMOTE_C"),
+}
+
 func main() {
-	trLocal := network.NewLocalTransport("LOCAL")
-	trRemoteA := network.NewLocalTransport("REMOTE_A")
-	trRemoteB := network.NewLocalTransport("REMOTE_B")
-	trRemoteC := network.NewLocalTransport("REMOTE_C")
+	// trLocal := network.NewLocalTransport("LOCAL")
+	// trRemoteA := network.NewLocalTransport("REMOTE_A")
+	// trRemoteB := network.NewLocalTransport("REMOTE_B")
+	// trRemoteC := network.NewLocalTransport("REMOTE_C")
 
-	trLocal.Connect(trRemoteA)
-	trRemoteA.Connect(trRemoteB)
-	trRemoteB.Connect(trRemoteC)
-	trRemoteB.Connect(trRemoteA)
-	trRemoteA.Connect(trLocal)
+	initRemoteServers(transports)
 
-	initRemoteServers([]network.Transport{trRemoteA, trRemoteB, trRemoteC})
+	// go func() {
+	// 	for {
+	// 		if err := sendTransaction(trRemoteA, trLocal.Addr()); err != nil {
+	// 			logrus.Error(err)
+	// 		}
+	// 		time.Sleep(2 * time.Second)
+	// 	}
+	// }()
 
-	go func() {
-		for {
-			if err := sendTransaction(trRemoteA, trLocal.Addr()); err != nil {
-				logrus.Error(err)
-			}
-			time.Sleep(2 * time.Second)
-		}
-	}()
-
-	if err := sendGetStatusMessage(trRemoteA, "REMOTE_B"); err != nil {
-		log.Fatal(err)
-	}
+	// if err := sendGetStatusMessage(trRemoteA, "REMOTE_B"); err != nil {
+	// 	log.Fatal(err)
+	// }
+	
 	// go func() {
 	// 	time.Sleep(7 * time.Second)
 
@@ -50,7 +50,7 @@ func main() {
 	// }()
 
 	privKey := crypto.GeneratePrivateKey()
-	localServer := makeServer("LOCAL", trLocal, &privKey)
+	localServer := makeServer("LOCAL", transports[0], &privKey)
 	localServer.Start()
 }
 
@@ -67,7 +67,7 @@ func makeServer(id string, tr network.Transport, pk *crypto.PrivateKey) *network
 		Transport:  tr,
 		PrivateKey: pk,
 		ID:         id,
-		Transports: []network.Transport{tr},
+		Transports: transports,
 	}
 
 	s, err := network.NewServer(opts)
