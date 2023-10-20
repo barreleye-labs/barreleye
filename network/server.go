@@ -70,13 +70,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		go s.validatorLoop()
 	}
 
-	// tr := s.Transports[0].(*LocalTransport)
-	// fmt.Printf("%+v\n", tr.peers)
-	// for _, tr := range s.Transports {
-	// 	if err := s.sendGetStatusMessage(tr); err != nil {
-	// 		s.Logger.Log("send get status error", err)
-	// 	}
-	// }
+	s.bootstrapNodes()
 
 	return s, nil
 }
@@ -94,7 +88,9 @@ free:
 			}
 
 			if err := s.RPCProcessor.ProcessMessage(msg); err != nil {
-				s.Logger.Log("error", err)
+				if err != core.ErrBlockKnown {
+					s.Logger.Log("error", err)
+				}
 			}
 
 		case <-s.quitCh:
@@ -103,6 +99,23 @@ free:
 	}
 
 	s.Logger.Log("msg", "Server is shutting down")
+}
+
+func (s *Server) bootstrapNodes() {
+	for _, tr := range s.Transports {
+		if s.Transport.Addr() != tr.Addr() {
+			if err := s.Transport.Connect(tr); err != nil {
+				s.Logger.Log("error", "could not connect to remote", "err", err)
+			}
+			s.Logger.Log("msg", "connect to remote", "we", s.Transport.Addr(), "addr", tr.Addr())
+
+			// Send the getStatusMessage so we can sync (if needed)
+
+			if err := s.sendGetStatusMessage(tr); err != nil {
+				s.Logger.Log("error", "sendGetStatusMessage", "err", err)
+			}
+		}
+	}
 }
 
 func (s *Server) validatorLoop() {
@@ -144,7 +157,7 @@ func (s *Server) sendGetStatusMessage(tr Transport) error {
 	}
 
 	msg := NewMessage(MessageTypeGetStatus, buf.Bytes())
-	if err := tr.SendMessage(tr.Addr(), msg.Bytes()); err != nil {
+	if err := s.Transport.SendMessage(tr.Addr(), msg.Bytes()); err != nil {
 		return err
 	}
 
