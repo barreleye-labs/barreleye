@@ -111,6 +111,8 @@ func (s *Server) bootstrapNodes() {
 
 			// Send the getStatusMessage so we can sync (if needed)
 
+			fmt.Printf("%s is sending message to => %+s\n", s.Transport.Addr(), tr.Addr())
+
 			if err := s.sendGetStatusMessage(tr); err != nil {
 				s.Logger.Log("error", "sendGetStatusMessage", "err", err)
 			}
@@ -139,11 +141,18 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 		return s.processGetStatusMessage(msg.From, t)
 	case *StatusMessage:
 		return s.processStatusMessage(msg.From, t)
+	case *GetBlocksMessage:
+		return s.processGetBlocksMessage(msg.From, t)
 	}
 
 	return nil
 }
 
+func (s *Server) processGetBlocksMessage(from NetAddr, data *GetBlocksMessage) error {
+	fmt.Printf("got get blocks message => %+v", data)
+
+	return nil
+}
 // TODO: Remove the Logic from the main function to here
 // Normally Transport which is our own transport should do the trick.
 func (s *Server) sendGetStatusMessage(tr Transport) error {
@@ -174,9 +183,27 @@ func (s *Server) broadcast(payload []byte) error {
 }
 
 func (s *Server) processStatusMessage(from NetAddr, data *StatusMessage) error {
-	fmt.Printf("=> received GetStatus response msg from %s => %+v\n", from, data)
 
-	return nil
+	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
+	if data.CurrentHeight <= s.chain.Height() {
+		s.Logger.Log("msg", "cannot sync blockHeight to low", "curHeight", s.chain.Height(), "theirHeight", data.CurrentHeight, "addr", from)
+		return nil
+	}
+
+	// 전달 받은 블록 높이가 나의 블록체인의 블록 높이 보다 큰 경우.
+	getBlocksMessage := &GetBlocksMessage {
+		From: s.chain.Height(),
+		To:	  0,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
+		return err
+	}
+
+	msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
+
+	return s.Transport.SendMessage(from, msg.Bytes())
 }
 
 func (s *Server) processGetStatusMessage(from NetAddr, data *GetStatusMessage) error {

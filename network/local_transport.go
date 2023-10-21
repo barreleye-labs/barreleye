@@ -38,6 +38,10 @@ func (t *LocalTransport) SendMessage(to NetAddr, payload []byte) error {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
+	if t.addr == to {
+		return nil
+	}
+	
 	peer, ok := t.peers[to]
 	if !ok {
 		return fmt.Errorf("%s: colud not send message to unknown peer %s", t.addr, to)

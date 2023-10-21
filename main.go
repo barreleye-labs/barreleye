@@ -5,10 +5,12 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/network"
+	"github.com/sirupsen/logrus"
 )
 
 var transports = []network.Transport {
@@ -19,35 +21,30 @@ var transports = []network.Transport {
 }
 
 func main() {
-	// trLocal := network.NewLocalTransport("LOCAL")
-	// trRemoteA := network.NewLocalTransport("REMOTE_A")
-	// trRemoteB := network.NewLocalTransport("REMOTE_B")
-	// trRemoteC := network.NewLocalTransport("REMOTE_C")
-
 	initRemoteServers(transports)
 
-	// go func() {
-	// 	for {
-	// 		if err := sendTransaction(trRemoteA, trLocal.Addr()); err != nil {
-	// 			logrus.Error(err)
-	// 		}
-	// 		time.Sleep(2 * time.Second)
-	// 	}
-	// }()
+	localNode := transports[0]
+	remoteNodeA := transports[1]
+	remoteNodeC := transports[3]
 
-	// if err := sendGetStatusMessage(trRemoteA, "REMOTE_B"); err != nil {
-	// 	log.Fatal(err)
-	// }
+	go func() {
+		for {
+			if err := sendTransaction(remoteNodeA, localNode.Addr()); err != nil {
+				logrus.Error(err)
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
 	
-	// go func() {
-	// 	time.Sleep(7 * time.Second)
+	go func() {
+		time.Sleep(7 * time.Second)
 
-	// 	trLate := network.NewLocalTransport("LATE_REMOTE")
-	// 	trRemoteC.Connect(trLate)
-	// 	lateServer := makeServer(string(trLate.Addr()), trLate, nil)
+		trLate := network.NewLocalTransport("LATE_REMOTE")
+		remoteNodeC.Connect(trLate)
+		lateServer := makeServer(string(trLate.Addr()), trLate, nil)
 
-	// 	go lateServer.Start()
-	// }()
+		go lateServer.Start()
+	}()
 
 	privKey := crypto.GeneratePrivateKey()
 	localServer := makeServer("LOCAL", transports[0], &privKey)
