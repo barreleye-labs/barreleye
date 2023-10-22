@@ -44,7 +44,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 	}
 	if opts.Logger == nil {
 		opts.Logger = log.NewLogfmtLogger(os.Stderr)
-		opts.Logger = log.With(opts.Logger, "ID", opts.ID)
+		opts.Logger = log.With(opts.Logger, "addr", opts.Transport.Addr())
 	}
 
 	chain, err := core.NewBlockchain(opts.Logger, genesisBlock())
@@ -110,9 +110,6 @@ func (s *Server) bootstrapNodes() {
 			s.Logger.Log("msg", "connect to remote", "we", s.Transport.Addr(), "addr", tr.Addr())
 
 			// Send the getStatusMessage so we can sync (if needed)
-
-			fmt.Printf("%s is sending message to => %+s\n", s.Transport.Addr(), tr.Addr())
-
 			if err := s.sendGetStatusMessage(tr); err != nil {
 				s.Logger.Log("error", "sendGetStatusMessage", "err", err)
 			}
