@@ -47,10 +47,7 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 			return err
 		}
 
-		fmt.Printf("STATE: %+v\n", vm.contractState)
-
-		result := vm.stack.Pop()
-		fmt.Printf("VM RESULT: %+v\n", result)
+		fmt.Printf("state => %+v\n", bc.contractState.data)
 	}
 
 	return bc.addBlockWithoutValidation(b)

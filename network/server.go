@@ -2,8 +2,8 @@ package network
 
 import (
 	"bytes"
-	"encoding/gob"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -16,19 +16,23 @@ import (
 var defaultBlockTime = 5 * time.Second
 
 type ServerOpts struct {
+	SeedNodes     []string
+	ListenAddr    string
+	TCPTransport  *TCPTransport
 	ID            string
-	Transport     Transport
 	Logger        log.Logger
 	RPCDecodeFunc RPCDecodeFunc
 	RPCProcessor  RPCProcessor
-	Transports    []Transport
 	BlockTime     time.Duration
 	PrivateKey    *crypto.PrivateKey
 }
 
 type Server struct {
+	TCPTransport *TCPTransport
+	peerCh       chan *TCPPeer
+	peerMap      map[net.Addr]*TCPPeer
 	ServerOpts
-	memPool     *TxPool
+	mempool     *TxPool
 	chain       *core.Blockchain
 	isValidator bool
 	rpcCh       chan RPC
@@ -44,21 +48,30 @@ func NewServer(opts ServerOpts) (*Server, error) {
 	}
 	if opts.Logger == nil {
 		opts.Logger = log.NewLogfmtLogger(os.Stderr)
-		opts.Logger = log.With(opts.Logger, "addr", opts.Transport.Addr())
+		opts.Logger = log.With(opts.Logger, "addr", opts.ID)
 	}
 
 	chain, err := core.NewBlockchain(opts.Logger, genesisBlock())
 	if err != nil {
 		return nil, err
 	}
+
+	peerCh := make(chan *TCPPeer)
+	tr := NewTCPTransport(opts.ListenAddr, peerCh)
+
 	s := &Server{
-		ServerOpts:  opts,
-		chain:       chain,
-		memPool:     NewTxPool(1000),
-		isValidator: opts.PrivateKey != nil,
-		rpcCh:       make(chan RPC),
-		quitCh:      make(chan struct{}, 1),
+		TCPTransport: tr,
+		peerCh:       peerCh,
+		peerMap:      make(map[net.Addr]*TCPPeer),
+		ServerOpts:   opts,
+		chain:        chain,
+		mempool:      NewTxPool(1000),
+		isValidator:  opts.PrivateKey != nil,
+		rpcCh:        make(chan RPC),
+		quitCh:       make(chan struct{}, 1),
 	}
+
+	s.TCPTransport.peerCh = peerCh
 
 	// If we dont got any processor from the server options, we going to use
 	// the server as default.
@@ -70,21 +83,50 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		go s.validatorLoop()
 	}
 
-	s.bootstrapNodes()
-
 	return s, nil
 }
 
+func (s *Server) bootstrapNetwork() {
+	for _, addr := range s.SeedNodes {
+		fmt.Println("trying to connect to ", addr)
+
+		go func(addr string) {
+			conn, err := net.Dial("tcp", addr)
+			if err != nil {
+				fmt.Printf("could not connect to %+v\n", conn)
+				return
+			}
+
+			s.peerCh <- &TCPPeer{
+				conn: conn,
+			}
+		}(addr)
+	}
+}
+
 func (s *Server) Start() {
-	s.initTransports()
+	s.TCPTransport.Start()
+	time.Sleep(time.Second * 1)
+
+	s.bootstrapNetwork()
+
+	s.Logger.Log("msg", "accepting TCP connection on", "addr", s.ListenAddr, "id", s.ID)
 
 free:
 	for {
 		select {
+		case peer := <-s.peerCh:
+			// TODO: add mutex PLZ!!!
+			s.peerMap[peer.conn.RemoteAddr()] = peer
+
+			go peer.readLoop(s.rpcCh)
+			fmt.Printf("new peer => %+v\n", peer)
+
 		case rpc := <-s.rpcCh:
 			msg, err := s.RPCDecodeFunc(rpc)
 			if err != nil {
 				s.Logger.Log("error", err)
+				continue
 			}
 
 			if err := s.RPCProcessor.ProcessMessage(msg); err != nil {
@@ -99,22 +141,6 @@ free:
 	}
 
 	s.Logger.Log("msg", "Server is shutting down")
-}
-
-func (s *Server) bootstrapNodes() {
-	for _, tr := range s.Transports {
-		if s.Transport.Addr() != tr.Addr() {
-			if err := s.Transport.Connect(tr); err != nil {
-				s.Logger.Log("error", "could not connect to remote", "err", err)
-			}
-			s.Logger.Log("msg", "connect to remote", "we", s.Transport.Addr(), "addr", tr.Addr())
-
-			// Send the getStatusMessage so we can sync (if needed)
-			if err := s.sendGetStatusMessage(tr); err != nil {
-				s.Logger.Log("error", "sendGetStatusMessage", "err", err)
-			}
-		}
-	}
 }
 
 func (s *Server) validatorLoop() {
@@ -135,9 +161,9 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 	case *core.Block:
 		return s.processBlock(t)
 	case *GetStatusMessage:
-		return s.processGetStatusMessage(msg.From, t)
+		// return s.processGetStatusMessage(msg.From, t)
 	case *StatusMessage:
-		return s.processStatusMessage(msg.From, t)
+		// return s.processStatusMessage(msg.From, t)
 	case *GetBlocksMessage:
 		return s.processGetBlocksMessage(msg.From, t)
 	}
@@ -145,81 +171,83 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 	return nil
 }
 
-func (s *Server) processGetBlocksMessage(from NetAddr, data *GetBlocksMessage) error {
+func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) error {
+
 	fmt.Printf("got get blocks message => %+v", data)
 
 	return nil
 }
+
 // TODO: Remove the Logic from the main function to here
 // Normally Transport which is our own transport should do the trick.
-func (s *Server) sendGetStatusMessage(tr Transport) error {
-	var (
-		getStatusMsg = new(GetStatusMessage)
-		buf          = new(bytes.Buffer)
-	)
+// func (s *Server) sendGetStatusMessage(tr Transport) error {
+// 	var (
+// 		getStatusMsg = new(GetStatusMessage)
+// 		buf          = new(bytes.Buffer)
+// 	)
 
-	if err := gob.NewEncoder(buf).Encode(getStatusMsg); err != nil {
-		return err
-	}
+// 	if err := gob.NewEncoder(buf).Encode(getStatusMsg); err != nil {
+// 		return err
+// 	}
 
-	msg := NewMessage(MessageTypeGetStatus, buf.Bytes())
-	if err := s.Transport.SendMessage(tr.Addr(), msg.Bytes()); err != nil {
-		return err
-	}
+// 	msg := NewMessage(MessageTypeGetStatus, buf.Bytes())
+// 	if err := s.Transport.SendMessage(tr.Addr(), msg.Bytes()); err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (s *Server) broadcast(payload []byte) error {
-	for _, tr := range s.Transports {
-		if err := tr.Broadcast(payload); err != nil {
-			return err
+	for netAddr, peer := range s.peerMap {
+		if err := peer.Send(payload); err != nil {
+			fmt.Printf("peer send error => addr %s [err: %s]\n", netAddr, err)
 		}
 	}
 	return nil
 }
 
-func (s *Server) processStatusMessage(from NetAddr, data *StatusMessage) error {
+// func (s *Server) processStatusMessage(from NetAddr, data *StatusMessage) error {
 
-	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
-	if data.CurrentHeight <= s.chain.Height() {
-		s.Logger.Log("msg", "cannot sync blockHeight to low", "curHeight", s.chain.Height(), "theirHeight", data.CurrentHeight, "addr", from)
-		return nil
-	}
+// 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
+// 	if data.CurrentHeight <= s.chain.Height() {
+// 		s.Logger.Log("msg", "cannot sync blockHeight to low", "curHeight", s.chain.Height(), "theirHeight", data.CurrentHeight, "addr", from)
+// 		return nil
+// 	}
 
-	// 전달 받은 블록 높이가 나의 블록체인의 블록 높이 보다 큰 경우.
-	getBlocksMessage := &GetBlocksMessage {
-		From: s.chain.Height(),
-		To:	  0,
-	}
+// 	// 전달 받은 블록 높이가 나의 블록체인의 블록 높이 보다 큰 경우.
+// 	getBlocksMessage := &GetBlocksMessage{
+// 		From: s.chain.Height(),
+// 		To:   0,
+// 	}
 
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
-		return err
-	}
+// 	buf := new(bytes.Buffer)
+// 	if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
+// 		return err
+// 	}
 
-	msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
+// 	msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
 
-	return s.Transport.SendMessage(from, msg.Bytes())
-}
+// 	return s.Transport.SendMessage(from, msg.Bytes())
+// }
 
-func (s *Server) processGetStatusMessage(from NetAddr, data *GetStatusMessage) error {
-	fmt.Printf("=> received GetStatus msg from %s => %+v\n", from, data)
+// func (s *Server) processGetStatusMessage(from NetAddr, data *GetStatusMessage) error {
+// 	fmt.Printf("=> received GetStatus msg from %s => %+v\n", from, data)
 
-	StatusMessage := &StatusMessage{
-		CurrentHeight: s.chain.Height(),
-		ID:            s.ID,
-	}
+// 	StatusMessage := &StatusMessage{
+// 		CurrentHeight: s.chain.Height(),
+// 		ID:            s.ID,
+// 	}
 
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(StatusMessage); err != nil {
-		return nil
-	}
+// 	buf := new(bytes.Buffer)
+// 	if err := gob.NewEncoder(buf).Encode(StatusMessage); err != nil {
+// 		return nil
+// 	}
 
-	msg := NewMessage(MessageTypeStatus, buf.Bytes())
+// 	msg := NewMessage(MessageTypeStatus, buf.Bytes())
 
-	return s.Transport.SendMessage(from, msg.Bytes())
-}
+// 	return s.Transport.SendMessage(from, msg.Bytes())
+// }
 
 func (s *Server) processBlock(b *core.Block) error {
 
@@ -235,7 +263,7 @@ func (s *Server) processBlock(b *core.Block) error {
 func (s *Server) processTransaction(tx *core.Transaction) error {
 	hash := tx.Hash(core.TxHasher{})
 
-	if s.memPool.Contains(hash) {
+	if s.mempool.Contains(hash) {
 		return nil
 	}
 
@@ -251,7 +279,7 @@ func (s *Server) processTransaction(tx *core.Transaction) error {
 
 	go s.broadcastTx(tx)
 
-	s.memPool.Add(tx)
+	s.mempool.Add(tx)
 
 	return nil
 }
@@ -278,15 +306,15 @@ func (s *Server) broadcastTx(tx *core.Transaction) error {
 	return s.broadcast(msg.Bytes())
 }
 
-func (s *Server) initTransports() {
-	for _, tr := range s.Transports {
-		go func(tr Transport) {
-			for rpc := range tr.Consume() {
-				s.rpcCh <- rpc
-			}
-		}(tr)
-	}
-}
+// func (s *Server) initTransports() {
+// 	for _, tr := range s.Transports {
+// 		go func(tr Transport) {
+// 			for rpc := range tr.Consume() {
+// 				s.rpcCh <- rpc
+// 			}
+// 		}(tr)
+// 	}
+// }
 
 func (s *Server) createNewBlock() error {
 	currentHeader, err := s.chain.GetHeader(s.chain.Height())
@@ -296,7 +324,7 @@ func (s *Server) createNewBlock() error {
 
 	// 우선은 멤풀에 있는 모든 트랜잭션을 블록에 담고 추후 수정 예정.
 	// 트랜잭션을 아직 구체화하지 않았기 때문.
-	txx := s.memPool.Pending()
+	txx := s.mempool.Pending()
 
 	block, err := core.NewBlockFromPrevHeader(currentHeader, txx)
 	if err != nil {
@@ -311,7 +339,7 @@ func (s *Server) createNewBlock() error {
 		return err
 	}
 
-	s.memPool.ClearPending()
+	s.mempool.ClearPending()
 
 	go s.broadcastBlock(block)
 
