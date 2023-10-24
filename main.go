@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"net"
+	"time"
 
 	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/crypto"
@@ -21,9 +22,9 @@ func main() {
 	remoteNodeB := makeServer("REMOTE_NODE_B", nil, ":5000", nil)
 	go remoteNodeB.Start()
 
-	// time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
 
-	// tcpTester()
+	tcpTester()
 
 	select {}
 }
