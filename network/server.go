@@ -131,7 +131,7 @@ free:
 				continue
 			}
 
-			fmt.Printf("new peer => %+v\n", peer)
+			s.Logger.Log("msg", "peer added to the server", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
 
 		case rpc := <-s.rpcCh:
 			msg, err := s.RPCDecodeFunc(rpc)
@@ -214,29 +214,37 @@ func (s *Server) broadcast(payload []byte) error {
 	return nil
 }
 
-// func (s *Server) processStatusMessage(from NetAddr, data *StatusMessage) error {
+func (s *Server) processStatusMessage(from net.Addr, data *StatusMessage) error {
+	s.Logger.Log("msg", "received STATUS message", "from", from)
+	
+	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
+	if data.CurrentHeight <= s.chain.Height() {
+		s.Logger.Log("msg", "cannot sync blockHeight to low", "curHeight", s.chain.Height(), "theirHeight", data.CurrentHeight, "addr", from)
+		return nil
+	}
 
-// 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
-// 	if data.CurrentHeight <= s.chain.Height() {
-// 		s.Logger.Log("msg", "cannot sync blockHeight to low", "curHeight", s.chain.Height(), "theirHeight", data.CurrentHeight, "addr", from)
-// 		return nil
-// 	}
+	// 전달 받은 블록 높이가 나의 블록체인의 블록 높이 보다 큰 경우.
+	getBlocksMessage := &GetBlocksMessage{
+		From: s.chain.Height(),
+		To:   0,
+	}
 
-// 	// 전달 받은 블록 높이가 나의 블록체인의 블록 높이 보다 큰 경우.
-// 	getBlocksMessage := &GetBlocksMessage{
-// 		From: s.chain.Height(),
-// 		To:   0,
-// 	}
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
+		return err
+	}
 
-// 	buf := new(bytes.Buffer)
-// 	if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
-// 		return err
-// 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-// 	msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
+	msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
+	peer, ok := s.peerMap[from]
+	if !ok {
+		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+	}
 
-// 	return s.Transport.SendMessage(from, msg.Bytes())
-// }
+	return peer.Send(msg.Bytes())
+}
 
 func (s *Server) processGetStatusMessage(from net.Addr, data *GetStatusMessage) error {
 	s.Logger.Log("msg", "received getStatus message", "from", from)
@@ -253,7 +261,12 @@ func (s *Server) processGetStatusMessage(from net.Addr, data *GetStatusMessage) 
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	peer := s.peerMap[from]
+
+	peer, ok := s.peerMap[from]
+	if !ok {
+		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+	}
+
 	msg := NewMessage(MessageTypeStatus, buf.Bytes())
 
 	return peer.Send(msg.Bytes())
