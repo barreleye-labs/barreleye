@@ -183,9 +183,25 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 }
 
 func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) error {
+	s.Logger.Log("msg", "received getBlocks message", "from", from)
 
-	fmt.Printf("got get blocks message => %+v\n", data)
+	blocks := []*core.Block{}
 
+	// This means we need to return the whole shebang.
+	ourHeight := s.chain.Height()
+	if data.To == 0 {
+		for i := 0; i < int(ourHeight); i++ {
+			block, err := s.chain.GetBlock(uint32(i))
+			if err != nil {
+				return err
+			}
+
+			blocks = append(blocks, block)
+		}
+	}
+
+	fmt.Printf("Blocks => %+v\n", blocks)
+	
 	return nil
 }
 
