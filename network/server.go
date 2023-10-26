@@ -174,7 +174,7 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 	case *GetStatusMessage:
 		return s.processGetStatusMessage(msg.From, t)
 	case *StatusMessage:
-		// return s.processStatusMessage(msg.From, t)
+		return s.processStatusMessage(msg.From, t)
 	case *GetBlocksMessage:
 		return s.processGetBlocksMessage(msg.From, t)
 	}
@@ -216,7 +216,7 @@ func (s *Server) broadcast(payload []byte) error {
 
 func (s *Server) processStatusMessage(from net.Addr, data *StatusMessage) error {
 	s.Logger.Log("msg", "received STATUS message", "from", from)
-	
+
 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
 	if data.CurrentHeight <= s.chain.Height() {
 		s.Logger.Log("msg", "cannot sync blockHeight to low", "curHeight", s.chain.Height(), "theirHeight", data.CurrentHeight, "addr", from)
