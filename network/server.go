@@ -177,6 +177,8 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 		return s.processStatusMessage(msg.From, t)
 	case *GetBlocksMessage:
 		return s.processGetBlocksMessage(msg.From, t)
+	case *BlocksMessage:
+		return s.processBlocksMessage(msg.From, t)
 	}
 
 	return nil
@@ -185,10 +187,11 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) error {
 	s.Logger.Log("msg", "received getBlocks message", "from", from)
 
-	blocks := []*core.Block{}
+	var (
+		blocks 	  = []*core.Block{}
+		ourHeight = s.chain.Height()
+	)
 
-	// This means we need to return the whole shebang.
-	ourHeight := s.chain.Height()
 	if data.To == 0 {
 		for i := 0; i < int(ourHeight); i++ {
 			block, err := s.chain.GetBlock(uint32(i))
@@ -200,9 +203,25 @@ func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) 
 		}
 	}
 
-	fmt.Printf("Blocks => %+v\n", blocks)
-	
-	return nil
+	blocksMsg := &BlocksMessage{
+		Blocks: blocks,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(blocksMsg); err != nil {
+		return err
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	msg := NewMessage(MessageTypeBlocks, buf.Bytes())
+	peer, ok := s.peerMap[from]
+	if !ok {
+		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+	}
+
+	return peer.Send(msg.Bytes())
 }
 
 func (s *Server) sendGetStatusMessage(peer *TCPPeer) error {
@@ -227,6 +246,19 @@ func (s *Server) broadcast(payload []byte) error {
 			fmt.Printf("peer send error => addr %s [err: %s]\n", netAddr, err)
 		}
 	}
+	return nil
+}
+
+func (s *Server) processBlocksMessage(from net.Addr, data *BlocksMessage) error {
+	s.Logger.Log("msg", "received BLOCKS!!!!!!!", "from", from)
+
+	for _, block := range data.Blocks {
+		fmt.Printf("BLOCK with => %+v\n", block.Header)
+		if err := s.chain.AddBlock(block); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
