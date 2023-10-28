@@ -203,6 +203,8 @@ func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) 
 		}
 	}
 
+	fmt.Printf("%+v\n", blocks[0].Header)
+
 	blocksMsg := &BlocksMessage{
 		Blocks: blocks,
 	}
