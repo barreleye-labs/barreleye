@@ -6,19 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func TestGeneratePrivateKey(t *testing.T) {
-// 	privKey := GeneratePrivateKey()
-// 	pubKey := privKey.PublicKey()
-// 	// address := pubKey.Address()
-
-// 	msg := []byte("hello world")
-// 	sig, err := privKey.Sign(msg)
-// 	assert.Nil(t, err)
-
-// 	b := sig.Verify(pubKey, msg)
-// 	assert.True(t, b)
-// }
-
 func TestKeypairSignVerifySuccess(t *testing.T) {
 	privKey := GeneratePrivateKey()
 	publicKey := privKey.PublicKey()

@@ -193,7 +193,7 @@ func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) 
 	)
 
 	if data.To == 0 {
-		for i := 0; i < int(ourHeight); i++ {
+		for i := int(data.From); i < int(ourHeight); i++ {
 			block, err := s.chain.GetBlock(uint32(i))
 			if err != nil {
 				return err
@@ -202,8 +202,6 @@ func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) 
 			blocks = append(blocks, block)
 		}
 	}
-
-	fmt.Printf("%+v\n", blocks[0].Header)
 
 	blocksMsg := &BlocksMessage{
 		Blocks: blocks,
@@ -255,9 +253,9 @@ func (s *Server) processBlocksMessage(from net.Addr, data *BlocksMessage) error 
 	s.Logger.Log("msg", "received BLOCKS!!!!!!!", "from", from)
 
 	for _, block := range data.Blocks {
-		fmt.Printf("BLOCK with => %+v\n", block.Header)
 		if err := s.chain.AddBlock(block); err != nil {
-			return err
+			fmt.Printf("adding block error %s\n", err)
+			continue
 		}
 	}
 
@@ -273,27 +271,9 @@ func (s *Server) processStatusMessage(from net.Addr, data *StatusMessage) error 
 		return nil
 	}
 
-	// 전달 받은 블록 높이가 나의 블록체인의 블록 높이 보다 큰 경우.
-	getBlocksMessage := &GetBlocksMessage{
-		From: s.chain.Height(),
-		To:   0,
-	}
-
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
-		return err
-	}
-
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
-	peer, ok := s.peerMap[from]
-	if !ok {
-		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
-	}
-
-	return peer.Send(msg.Bytes())
+	go s.requestBlocksLoop(from)
+	
+	return nil
 }
 
 func (s *Server) processGetStatusMessage(from net.Addr, data *GetStatusMessage) error {
@@ -355,6 +335,39 @@ func (s *Server) processTransaction(tx *core.Transaction) error {
 	s.mempool.Add(tx)
 
 	return nil
+}
+
+// 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
+func (s *Server) requestBlocksLoop(peer net.Addr) error {
+	ticker := time.NewTicker(3 * time.Second)
+	for {
+		ourHeight := s.chain.Height()
+		s.Logger.Log("msg", "requesting new blocks", "currentHeight", ourHeight)
+		getBlocksMessage := &GetBlocksMessage{
+			From: ourHeight + 1,
+			To: 0,
+		}
+		
+		buf := new(bytes.Buffer)
+		if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
+			return err
+		}
+
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+
+		msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
+		peer, ok := s.peerMap[peer]
+		if !ok {
+			return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+		}
+
+		if err := peer.Send(msg.Bytes()); err != nil {
+			s.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
+		}
+
+		<- ticker.C
+	}
 }
 
 func (s *Server) broadcastBlock(b *core.Block) error {
@@ -428,5 +441,11 @@ func genesisBlock() *core.Block {
 	}
 
 	b, _ := core.NewBlock(header, nil)
+
+	privKey := crypto.GeneratePrivateKey()
+	if err := b.Sign(privKey); err != nil {
+		panic(err)
+	}
+
 	return b
 }
