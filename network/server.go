@@ -193,7 +193,7 @@ func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) 
 	)
 
 	if data.To == 0 {
-		for i := int(data.From); i < int(ourHeight); i++ {
+		for i := int(data.From); i <= int(ourHeight); i++ {
 			block, err := s.chain.GetBlock(uint32(i))
 			if err != nil {
 				return err
@@ -342,7 +342,9 @@ func (s *Server) requestBlocksLoop(peer net.Addr) error {
 	ticker := time.NewTicker(3 * time.Second)
 	for {
 		ourHeight := s.chain.Height()
-		s.Logger.Log("msg", "requesting new blocks", "currentHeight", ourHeight)
+
+		s.Logger.Log("msg", "requesting new blocks", "requesting height", ourHeight + 1)
+		
 		getBlocksMessage := &GetBlocksMessage{
 			From: ourHeight + 1,
 			To: 0,
