@@ -22,5 +22,7 @@
 
 <br>
 
-## Where is the Explorer?
-![barreleye-fish-black-32](https://github.com/barreleye-labs/barreleye/assets/48827393/c277ed0b-f82d-4474-a3d2-7dcaa3d60e46) [Barreleye Explorer](https://github.com/barreleye-labs/barreleye-explorer)
+## Our projects
+![barreleye-fish-black-24](https://github.com/barreleye-labs/barreleye/assets/48827393/698b04c7-454a-4cb9-8680-ac5647b558fc)&nbsp;&nbsp;&nbsp;[Barreleye](https://github.com/barreleye-labs/barreleye)
+
+![barreleye-fish-black-24](https://github.com/barreleye-labs/barreleye/assets/48827393/698b04c7-454a-4cb9-8680-ac5647b558fc)&nbsp;&nbsp;&nbsp;[Barreleye Explorer](https://github.com/barreleye-labs/barreleye-explorer)
