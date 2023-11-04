@@ -13,7 +13,7 @@
    Official open source of <b>Barreleye Blockchain Core. </b>
 
  
-  with initial developer [@youngmin Kim](https://github.com/k930503), [@nayoung Kim](https://github.com/usiyoung)
+  with initial developer [@Youngmin Kim](https://github.com/k930503), [@Nayoung Kim](https://github.com/usiyoung)
 
   
 </a></h6>
