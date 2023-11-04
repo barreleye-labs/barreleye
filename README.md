@@ -7,7 +7,7 @@
 
   <br />
 
-  <h2>@Barreleye Core &middot; <img src="https://img.shields.io/badge/Go-1.18.10-success" alt="go version" height="18"/></h2>
+  <h2>@Barreleye Chain &middot; <img src="https://img.shields.io/badge/Go-1.18.10-success" alt="go version" height="18"/></h2>
 
   <p align="center">
    Official open source of <b>Barreleye Blockchain Core. </b>
