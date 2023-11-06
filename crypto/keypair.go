@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"math/big"
 
 	"github.com/barreleye-labs/barreleye/types"
@@ -51,6 +52,11 @@ func (k PublicKey) Address() types.Address {
 
 type Signature struct {
 	S, R *big.Int
+}
+
+func (sig Signature) String() string {
+	b := append(sig.R.Bytes(), sig.S.Bytes()...)
+	return hex.EncodeToString(b)
 }
 
 func (sig Signature) Verify(PubKey PublicKey, data []byte) bool {
