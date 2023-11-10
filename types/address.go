@@ -9,7 +9,7 @@ type Address [20]uint8
 
 func (a Address) ToSlice() []byte {
 	b := make([]byte, 20)
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 20; i++ {
 		b[i] = a[i]
 	}
 	return b
