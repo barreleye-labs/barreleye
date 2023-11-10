@@ -51,11 +51,12 @@ func (k PublicKey) Address() types.Address {
 }
 
 type Signature struct {
-	S, R *big.Int
+	S *big.Int 
+	R *big.Int
 }
 
 func (sig Signature) String() string {
-	b := append(sig.R.Bytes(), sig.S.Bytes()...)
+	b := append(sig.S.Bytes(), sig.R.Bytes()...)
 	return hex.EncodeToString(b)
 }
 

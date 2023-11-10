@@ -1,11 +1,12 @@
 package api
 
 import (
-	"fmt"
+	"encoding/hex"
 	"net/http"
 	"strconv"
 
 	"github.com/barreleye-labs/barreleye/core"
+	"github.com/barreleye-labs/barreleye/types"
 	"github.com/go-kit/log"
 	"github.com/labstack/echo/v4"
 )
@@ -15,6 +16,7 @@ type APIError struct {
 }
 
 type Block struct {
+	Hash		  string
 	Version		  uint32
 	DataHash 	  string
 	PrevBlockHash string
@@ -50,9 +52,10 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) handleGetBlock(c echo.Context) error {
-	hashOrId := c.Param("hashorid")
+	hashOrID := c.Param("hashorid")
 
-	height, err := strconv.Atoi(hashOrId)
+	height, err := strconv.Atoi(hashOrID)
+	// If the error is nil we can assume the height of the block is given.
 	if err == nil {
 		block, err := s.bc.GetBlock(uint32(height))
 		if err != nil {
@@ -61,6 +64,7 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 		}
 
 		jsonBlock := Block{
+			Hash: 		   block.Hash(core.BlockHasher{}).String(),
 			Version: 	   block.Header.Version,
 			Height: 	   block.Header.Height,
 			DataHash: 	   block.Header.DataHash.String(),
@@ -73,7 +77,17 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 		return c.JSON(http.StatusOK, jsonBlock)
 	}
 
-	fmt.Print("errrrrefef:", err)
-	fmt.Println()
-	panic("need to implement getBlockByHash!!!!")
+	// otherwise assume its the hash
+
+	b, err := hex.DecodeString(hashOrID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	block, err := s.bc.GetBlockByHash(types.HashFromBytes(b))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, block)
 }
