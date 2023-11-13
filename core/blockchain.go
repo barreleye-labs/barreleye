@@ -9,13 +9,14 @@ import (
 )
 
 type Blockchain struct {
-	logger    log.Logger
-	store     Storage
-	lock      sync.RWMutex
-	headers   []*Header
-	blocks 	  []*Block
-	blockStore map[types.Hash]*Block
-	validator Validator
+	logger    	 log.Logger
+	store     	 Storage
+	lock      	 sync.RWMutex
+	headers   	 []*Header
+	blocks 	  	 []*Block
+	txStore 	 map[types.Hash]*Transaction
+	blockStore   map[types.Hash]*Block
+	validator    Validator
 	// TODO: make this on interface.
 	contractState *State
 }
@@ -27,6 +28,7 @@ func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
 		store:         NewMemorystore(),
 		logger:        l,
 		blockStore:    make(map[types.Hash]*Block),
+		txStore: 	   make(map[types.Hash]*Transaction),
 	}
 	bc.validator = NewBlockValidator(bc)
 	err := bc.addBlockWithoutValidation(genesis)
@@ -56,6 +58,9 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 }
 
 func (bc *Blockchain) GetBlockByHash(hash types.Hash) (*Block, error) {
+	bc.lock.Lock()
+	defer bc.lock.Unlock()
+
 	block, ok := bc.blockStore[hash]
 	if !ok {
 		return nil, fmt.Errorf("block with hash (%s) not found", hash)
@@ -86,6 +91,18 @@ func (bc *Blockchain) GetHeader(height uint32) (*Header, error) {
 	return bc.headers[height], nil
 }
 
+func (bc *Blockchain) GetTxByHash(hash types.Hash) (*Transaction, error) {
+	bc.lock.Lock()
+	defer bc.lock.Unlock()
+
+	tx, ok := bc.txStore[hash]
+	if !ok {
+		return nil, fmt.Errorf("could not find tx with hash (%s)", hash)
+	}
+
+	return tx, nil
+}
+
 func (bc *Blockchain) HasBlock(height uint32) bool {
 	return height <= bc.Height()
 }
@@ -104,6 +121,11 @@ func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
 	bc.blockStore[b.Hash(BlockHasher{})] = b
+
+	for _, tx := range b.Transactions {
+		bc.txStore[tx.Hash(TxHasher{})] = tx
+	}
+
 	bc.lock.Unlock()
 
 	bc.logger.Log(

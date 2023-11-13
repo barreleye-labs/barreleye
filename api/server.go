@@ -11,6 +11,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type TxResponse struct {
+	TxCount uint
+	Hashes  []string
+}
+
 type APIError struct {
 	Error string
 }
@@ -24,6 +29,8 @@ type Block struct {
 	Timestamp	  int64
 	Validator 	  string
 	Signature	  string
+
+	TxResponse	  TxResponse
 }
 
 type ServerConfig struct {
@@ -47,8 +54,25 @@ func (s *Server) Start() error {
 	e := echo.New()
 
 	e.GET("/block/:hashorid", s.handleGetBlock)
+	e.GET("/tx/:hash", s.handleGetTx)
 
 	return e.Start(s.ListenAddr)
+}
+
+func (s *Server) handleGetTx(c echo.Context) error {
+	hash := c.Param("hash")
+
+	b, err := hex.DecodeString(hash)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	tx, err := s.bc.GetTxByHash(types.HashFromBytes(b))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error:  err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, tx)
 }
 
 func (s *Server) handleGetBlock(c echo.Context) error {
@@ -63,18 +87,7 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})	// 위와 같은 의미. 코드 리팩토링
 		}
 
-		jsonBlock := Block{
-			Hash: 		   block.Hash(core.BlockHasher{}).String(),
-			Version: 	   block.Header.Version,
-			Height: 	   block.Header.Height,
-			DataHash: 	   block.Header.DataHash.String(),
-			PrevBlockHash: block.PrevBlockHash.String(),
-			Timestamp: 	   block.Timestamp,
-			Validator: 	   block.Validator.Address().String(),
-			Signature: 	   block.Signature.String(),
-		}
-
-		return c.JSON(http.StatusOK, jsonBlock)
+		return c.JSON(http.StatusOK, intoJSONBlock(block))
 	}
 
 	// otherwise assume its the hash
@@ -89,5 +102,28 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, block)
+	return c.JSON(http.StatusOK, intoJSONBlock(block))
+}
+
+func intoJSONBlock(block *core.Block) Block {
+	txResponse := TxResponse{
+		TxCount: uint(len(block.Transactions)),
+		Hashes: make([]string, len(block.Transactions)),
+	}
+
+	for i := 0; i < int(txResponse.TxCount); i++ {
+		txResponse.Hashes[i] = block.Transactions[i].Hash(core.TxHasher{}).String()
+	}
+
+	return Block{
+		Hash: 		   block.Hash(core.BlockHasher{}).String(),
+		Version: 	   block.Header.Version,
+		Height: 	   block.Header.Height,
+		DataHash: 	   block.Header.DataHash.String(),
+		PrevBlockHash: block.PrevBlockHash.String(),
+		Timestamp: 	   block.Timestamp,
+		Validator: 	   block.Validator.Address().String(),
+		Signature: 	   block.Signature.String(),
+		TxResponse:    txResponse,
+	}
 }
