@@ -44,6 +44,7 @@ type Server struct {
 	isValidator bool
 	rpcCh       chan RPC
 	quitCh      chan struct{}
+	txChan		chan *core.Transaction
 }
 
 func NewServer(opts ServerOpts) (*Server, error) {
@@ -63,12 +64,14 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		return nil, err
 	}
 
+	txChan := make(chan *core.Transaction)
+
 	if len(opts.APIListenAddr) > 0 {
 		apiServerCfg := api.ServerConfig{
 			Logger: opts.Logger,
 			ListenAddr: opts.APIListenAddr,
 		}
-		apiServer := api.NewServer(apiServerCfg, chain)
+		apiServer := api.NewServer(apiServerCfg, chain, txChan)
 	
 		go apiServer.Start()
 
@@ -88,6 +91,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		isValidator:  opts.PrivateKey != nil,
 		rpcCh:        make(chan RPC),
 		quitCh:       make(chan struct{}, 1),
+		txChan: 	  make(chan *core.Transaction),
 	}
 
 	s.TCPTransport.peerCh = peerCh
