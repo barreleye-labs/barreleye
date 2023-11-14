@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/types"
@@ -11,6 +12,7 @@ type Transaction struct {
 	Data []byte
 	From      crypto.PublicKey
 	Signature *crypto.Signature
+	Nounce	  int64
 
 	// cached version of the tx data hash
 	hash types.Hash
@@ -21,6 +23,7 @@ type Transaction struct {
 func NewTransaction(data []byte) *Transaction {
 	return &Transaction{
 		Data: data,
+		Nounce: rand.Int63n(1000000000000),
 	}
 }
 

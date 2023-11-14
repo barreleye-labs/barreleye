@@ -91,7 +91,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		isValidator:  opts.PrivateKey != nil,
 		rpcCh:        make(chan RPC),
 		quitCh:       make(chan struct{}, 1),
-		txChan: 	  make(chan *core.Transaction),
+		txChan: 	  txChan,
 	}
 
 	s.TCPTransport.peerCh = peerCh
@@ -151,10 +151,15 @@ free:
 
 			s.Logger.Log("msg", "peer added to the server", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
 
+		case tx := <-s.txChan:
+			if err := s.processTransaction(tx); err != nil {
+				s.Logger.Log("process TX error", err)
+			}
+
 		case rpc := <-s.rpcCh:
 			msg, err := s.RPCDecodeFunc(rpc)
 			if err != nil {
-				s.Logger.Log("error", err)
+				s.Logger.Log("RPC error", err)
 				continue
 			}
 

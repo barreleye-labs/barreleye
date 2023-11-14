@@ -68,7 +68,8 @@ func (s *Server) handlePostTx(c echo.Context) error {
 	if err := gob.NewDecoder(c.Request().Body).Decode(tx); err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
-
+	s.txChan <- tx
+	
 	return nil
 }
 

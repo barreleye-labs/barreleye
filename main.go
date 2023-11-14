@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -32,7 +31,14 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 
-	txSender()
+	txSendTicker := time.NewTicker(1 * time.Second)
+	go func() {
+		for {
+			txSender()
+			
+			<-txSendTicker.C
+		}
+	}()
 	
 	select {}
 }
@@ -71,12 +77,10 @@ func txSender() {
 	}
 	
 	client := http.Client{}
-	resp, err := client.Do(req)
+	_, err = client.Do(req)
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Printf("%+v\n", resp)
 }
 
 // var transports = []network.Transport{
