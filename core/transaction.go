@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/gob"
 	"fmt"
 	"math/rand"
 
@@ -8,16 +9,37 @@ import (
 	"github.com/barreleye-labs/barreleye/types"
 )
 
+type TxType byte
+
+const (
+	TxTypeCollection TxType = iota // 0x0
+	TxTypeMint					   // 0x01 
+)
+
+type CollectionTx struct {
+	Fee		 int64
+	MetaData []byte
+}
+
+type MintTx struct {
+	Fee 	   		int64
+	NFT 	   		types.Hash
+	Collection 		types.Hash
+	MetaData   		[]byte
+	CollectionOwner crypto.PublicKey
+	Signature		crypto.Signature
+}
+
 type Transaction struct {
-	Data []byte
+	Type	  TxType
+	TxInner	  any
+	Data 	  []byte
 	From      crypto.PublicKey
 	Signature *crypto.Signature
 	Nounce	  int64
 
 	// cached version of the tx data hash
 	hash types.Hash
-	// firstSeen is the timestamp of when this tx is first seen locally
-	firstSeen int64
 }
 
 func NewTransaction(data []byte) *Transaction {
@@ -66,10 +88,7 @@ func (tx *Transaction) Encode(enc Encoder[*Transaction]) error {
 	return enc.Encode(tx)
 }
 
-func (tx *Transaction) SetFirstSeen(t int64) {
-	tx.firstSeen = t
-}
-
-func (tx *Transaction) FirstSeen() int64 {
-	return tx.firstSeen
+func init() {
+	gob.Register(CollectionTx{})
+	gob.Register(MintTx{})
 }
