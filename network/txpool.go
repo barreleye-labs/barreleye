@@ -17,8 +17,8 @@ type TxPool struct {
 
 func NewTxPool(maxLength int) *TxPool {
 	return &TxPool{
-		all: NewTxSortedMap(),
-		pending: NewTxSortedMap(),
+		all: 	   NewTxSortedMap(),
+		pending:   NewTxSortedMap(),
 		maxLength: maxLength,
 	}
 }
