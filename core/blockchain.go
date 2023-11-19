@@ -9,26 +9,32 @@ import (
 )
 
 type Blockchain struct {
-	logger    	 log.Logger
-	store     	 Storage
-	lock      	 sync.RWMutex
-	headers   	 []*Header
-	blocks 	  	 []*Block
-	txStore 	 map[types.Hash]*Transaction
-	blockStore   map[types.Hash]*Block
-	validator    Validator
+	logger    	 	log.Logger
+	store     	 	Storage
+	lock      	 	sync.RWMutex
+	headers   	 	[]*Header
+	blocks 	  	 	[]*Block
+	txStore 	 	map[types.Hash]*Transaction
+	blockStore   	map[types.Hash]*Block
+
+	stateLock		sync.RWMutex
+	collectionState map[types.Hash]*CollectionTx
+	minState		map[types.Hash]*MintTx
+	validator    	Validator
 	// TODO: make this on interface.
 	contractState *State
 }
 
 func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
 	bc := &Blockchain{
-		contractState: NewState(),
-		headers:       []*Header{},
-		store:         NewMemorystore(),
-		logger:        l,
-		blockStore:    make(map[types.Hash]*Block),
-		txStore: 	   make(map[types.Hash]*Transaction),
+		contractState: 	 NewState(),
+		headers:       	 []*Header{},
+		store:         	 NewMemorystore(),
+		logger:        	 l,
+		collectionState: make(map[types.Hash]*CollectionTx),
+		minState: 		 make(map[types.Hash]*MintTx),
+		blockStore:    	 make(map[types.Hash]*Block),
+		txStore: 	   	 make(map[types.Hash]*Transaction),
 	}
 	bc.validator = NewBlockValidator(bc)
 	err := bc.addBlockWithoutValidation(genesis)
@@ -45,14 +51,34 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 		return err
 	}
 
-	for _, tx := range b.Transactions {
-		bc.logger.Log("msg", "excuting code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
+	bc.stateLock.Lock()
+	defer bc.stateLock.Unlock()
 
+	for _, tx := range b.Transactions {
 		if len(tx.Data) > 0 {
+			bc.logger.Log("msg", "excuting code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
 			vm := NewVM(tx.Data, bc.contractState)
 			if err := vm.Run(); err != nil {
 				return err
 			}
+		}
+
+		hash := tx.Hash(TxHasher{})
+		switch t := tx.TxInner.(type) {
+		case CollectionTx:
+			bc.collectionState[hash] = &t
+			bc.logger.Log("msg", "created new NFT collection", "hash", hash)
+		case MintTx:
+			_, ok := bc.collectionState[t.Collection]
+			if !ok {
+				return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
+			}
+
+			bc.minState[hash] = &t
+			
+			bc.logger.Log("msg", "created new NFT mint", "NFT", t.NFT, "collection", t.Collection)
+		default:
+			fmt.Printf("unsupported tx type %v", t)
 		}
 	}
 

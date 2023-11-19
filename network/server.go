@@ -72,7 +72,6 @@ func NewServer(opts ServerOpts) (*Server, error) {
 			ListenAddr: opts.APIListenAddr,
 		}
 		apiServer := api.NewServer(apiServerCfg, chain, txChan)
-	
 		go apiServer.Start()
 
 		opts.Logger.Log("msg", "JSON API server running", "port", opts.APIListenAddr)
@@ -129,6 +128,7 @@ func (s *Server) bootstrapNetwork() {
 
 func (s *Server) Start() {
 	s.TCPTransport.Start()
+
 	time.Sleep(time.Second * 1)
 
 	s.bootstrapNetwork()
@@ -139,7 +139,6 @@ free:
 	for {
 		select {
 		case peer := <-s.peerCh:
-			
 			s.peerMap[peer.conn.RemoteAddr()] = peer
 
 			go peer.readLoop(s.rpcCh)
@@ -183,8 +182,13 @@ func (s *Server) validatorLoop() {
 	s.Logger.Log("msg", "Starting validator loop", "blockTime", s.BlockTime)
 
 	for {
+		fmt.Println("creating new block")
+		
+		if err := s.createNewBlock(); err != nil {
+			s.Logger.Log("create block error", err)
+		}
+
 		<-ticker.C
-		s.createNewBlock()
 	}
 }
 
@@ -277,8 +281,8 @@ func (s *Server) processBlocksMessage(from net.Addr, data *BlocksMessage) error 
 
 	for _, block := range data.Blocks {
 		if err := s.chain.AddBlock(block); err != nil {
-			fmt.Printf("adding block error %s\n", err)
-			continue
+			s.Logger.Log("error", err.Error())
+			return err
 		}
 	}
 
@@ -309,7 +313,7 @@ func (s *Server) processGetStatusMessage(from net.Addr, data *GetStatusMessage) 
 
 	buf := new(bytes.Buffer)
 	if err := gob.NewEncoder(buf).Encode(StatusMessage); err != nil {
-		return nil
+		return err
 	}
 
 	s.mu.RLock()
@@ -326,8 +330,8 @@ func (s *Server) processGetStatusMessage(from net.Addr, data *GetStatusMessage) 
 }
 
 func (s *Server) processBlock(b *core.Block) error {
-
 	if err := s.chain.AddBlock(b); err != nil {
+		s.Logger.Log("error", err.Error())
 		return err
 	}
 
@@ -363,6 +367,7 @@ func (s *Server) processTransaction(tx *core.Transaction) error {
 // 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
 func (s *Server) requestBlocksLoop(peer net.Addr) error {
 	ticker := time.NewTicker(3 * time.Second)
+
 	for {
 		ourHeight := s.chain.Height()
 
@@ -416,16 +421,6 @@ func (s *Server) broadcastTx(tx *core.Transaction) error {
 
 	return s.broadcast(msg.Bytes())
 }
-
-// func (s *Server) initTransports() {
-// 	for _, tr := range s.Transports {
-// 		go func(tr Transport) {
-// 			for rpc := range tr.Consume() {
-// 				s.rpcCh <- rpc
-// 			}
-// 		}(tr)
-// 	}
-// }
 
 func (s *Server) createNewBlock() error {
 	currentHeader, err := s.chain.GetHeader(s.chain.Height())
