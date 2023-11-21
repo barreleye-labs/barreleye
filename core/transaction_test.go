@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/barreleye-labs/barreleye/crypto"
+	"github.com/barreleye-labs/barreleye/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,11 +18,11 @@ func TestNFTTransaction(t *testing.T) {
 
 	privKey := crypto.GeneratePrivateKey()
 	tx := &Transaction{
-		Type: 	 TxTypeCollection,
 		TxInner: collectionTx,
 	}
 	tx.Sign(privKey)
-
+	tx.hash = types.Hash{}
+	
 	buf := new(bytes.Buffer)
 	assert.Nil(t, gob.NewEncoder(buf).Encode(tx))
 
@@ -59,6 +60,7 @@ func TestTxEncodeDecode(t *testing.T) {
 	tx := randomTxWithSignature(t)
 	buf := &bytes.Buffer{}
 	assert.Nil(t, tx.Encode(NewGobTxEncoder(buf)))
+	tx.hash = types.Hash{}
 
 	txDecoded := new(Transaction)
 	assert.Nil(t, txDecoded.Decode(NewGobTxDecoder(buf)))
