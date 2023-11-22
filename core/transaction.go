@@ -31,8 +31,12 @@ type MintTx struct {
 }
 
 type Transaction struct {
+	// Only used for native NFT Logic
 	TxInner	  any
+	// Any arbitrary data for the VM
 	Data 	  []byte
+	To		  crypto.PublicKey
+	Value	  uint64
 	From      crypto.PublicKey
 	Signature *crypto.Signature
 	Nounce	  int64

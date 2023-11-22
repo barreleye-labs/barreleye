@@ -63,26 +63,42 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 			}
 		}
 
-		hash := tx.Hash(TxHasher{})
-		switch t := tx.TxInner.(type) {
-		case CollectionTx:
-			bc.collectionState[hash] = &t
-			bc.logger.Log("msg", "created new NFT collection", "hash", hash)
-		case MintTx:
-			_, ok := bc.collectionState[t.Collection]
-			if !ok {
-				return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
+		// txInner가 널이 아니면 NFT관련해서 처리해야할 것
+		if tx.TxInner != nil {
+			if err := bc.handleNativeNFT(tx); err != nil {
+				return err
 			}
+		}
 
-			bc.minState[hash] = &t
-			
-			bc.logger.Log("msg", "created new NFT mint", "NFT", t.NFT, "collection", t.Collection)
-		default:
-			fmt.Printf("unsupported tx type %v", t)
+		// 일반 트랜잭션
+		if tx.Value > 0 {
+			fmt.Printf("someone is going to send money from (%s) => to (%s) => amount (%d)", tx.From, tx.To, tx.Value)
 		}
 	}
 
 	return bc.addBlockWithoutValidation(b)
+}
+
+func (bc *Blockchain) handleNativeNFT(tx *Transaction) error {
+	hash := tx.Hash(TxHasher{})
+
+	switch t := tx.TxInner.(type) {
+	case CollectionTx:
+		bc.collectionState[hash] = &t
+		bc.logger.Log("msg", "created new NFt collection", "hash", hash)
+	case MintTx:
+		_, ok := bc.collectionState[t.Collection]
+		if !ok {
+			return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
+		}
+		bc.minState[hash] = &t
+
+		bc.logger.Log("msg", "created new NFT mint", "NFT", t.NFT, "collection", t.Collection)
+	default:
+		return fmt.Errorf("unsupported tx type %v", t)
+	}
+
+	return nil
 }
 
 func (bc *Blockchain) GetBlockByHash(hash types.Hash) (*Block, error) {
