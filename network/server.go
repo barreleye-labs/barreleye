@@ -183,7 +183,7 @@ func (s *Server) validatorLoop() {
 
 	for {
 		fmt.Println("creating new block")
-		
+
 		if err := s.createNewBlock(); err != nil {
 			s.Logger.Log("create block error", err)
 		}
@@ -461,6 +461,12 @@ func genesisBlock() *core.Block {
 	}
 
 	b, _ := core.NewBlock(header, nil)
+
+	coinbase := crypto.PublicKey{}
+	tx := core.NewTransaction(nil)
+	tx.From = coinbase
+	tx.To = coinbase
+	tx.Value = 10_000_000
 
 	privKey := crypto.GeneratePrivateKey()
 	if err := b.Sign(privKey); err != nil {

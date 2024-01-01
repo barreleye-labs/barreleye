@@ -1,6 +1,9 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+)
+
 type State struct {
 	data map[string][]byte
 }

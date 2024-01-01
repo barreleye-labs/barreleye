@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"math/big"
 
 	"github.com/barreleye-labs/barreleye/types"
@@ -27,8 +28,8 @@ func (k PrivateKey) Sign(data []byte) (*Signature, error) {
 	}, nil
 }
 
-func GeneratePrivateKey() PrivateKey {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func NewPrivateKeyFromReader(r io.Reader) PrivateKey {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), r)
 	if err != nil {
 		panic(err)
 	}
@@ -38,11 +39,19 @@ func GeneratePrivateKey() PrivateKey {
 	}
 }
 
+func GeneratePrivateKey() PrivateKey {
+	return NewPrivateKeyFromReader(rand.Reader)
+}
+
 func (k PrivateKey) PublicKey() PublicKey {
 	return elliptic.MarshalCompressed(k.key.PublicKey, k.key.PublicKey.X, k.key.PublicKey.Y)
 }
 
 type PublicKey []byte
+
+func (k PublicKey) String() string {
+	return hex.EncodeToString(k)
+}
 
 func (k PublicKey) Address() types.Address {
 	h := sha256.Sum256(k)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/types"
 	"github.com/go-kit/log"
 )
@@ -17,6 +18,8 @@ type Blockchain struct {
 	txStore 	 	map[types.Hash]*Transaction
 	blockStore   	map[types.Hash]*Block
 
+	accountState	*AccountState
+
 	stateLock		sync.RWMutex
 	collectionState map[types.Hash]*CollectionTx
 	minState		map[types.Hash]*MintTx
@@ -26,11 +29,18 @@ type Blockchain struct {
 }
 
 func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
+	
+	accountState := NewAccountState()
+	
+	coinbase := crypto.PublicKey{}
+	accountState.CreateAccount(coinbase.Address())
+
 	bc := &Blockchain{
 		contractState: 	 NewState(),
 		headers:       	 []*Header{},
 		store:         	 NewMemorystore(),
 		logger:        	 l,
+		accountState: 	 accountState,
 		collectionState: make(map[types.Hash]*CollectionTx),
 		minState: 		 make(map[types.Hash]*MintTx),
 		blockStore:    	 make(map[types.Hash]*Block),
@@ -51,32 +61,17 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 		return err
 	}
 
-	bc.stateLock.Lock()
-	defer bc.stateLock.Unlock()
-
-	for _, tx := range b.Transactions {
-		if len(tx.Data) > 0 {
-			bc.logger.Log("msg", "excuting code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
-			vm := NewVM(tx.Data, bc.contractState)
-			if err := vm.Run(); err != nil {
-				return err
-			}
-		}
-
-		// txInner가 널이 아니면 NFT관련해서 처리해야할 것
-		if tx.TxInner != nil {
-			if err := bc.handleNativeNFT(tx); err != nil {
-				return err
-			}
-		}
-
-		// 일반 트랜잭션
-		if tx.Value > 0 {
-			fmt.Printf("someone is going to send money from (%s) => to (%s) => amount (%d)", tx.From, tx.To, tx.Value)
-		}
-	}
-
 	return bc.addBlockWithoutValidation(b)
+}
+
+func (bc *Blockchain) handleNativeTransfer(tx *Transaction) error {
+	bc.logger.Log(
+		"msg", "handle native token transfer", 
+		"from", tx.From, 
+		"to", tx.To, 
+		"value", tx.Value)
+
+	return bc.accountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
 }
 
 func (bc *Blockchain) handleNativeNFT(tx *Transaction) error {
@@ -160,7 +155,50 @@ func (bc *Blockchain) Height() uint32 {
 	return uint32(len(bc.headers) - 1)
 }
 
+func (bc *Blockchain) handleTransaction(tx *Transaction) error {
+	if len(tx.Data) > 0 {
+		bc.logger.Log("msg", "excuting code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
+		vm := NewVM(tx.Data, bc.contractState)
+		if err := vm.Run(); err != nil {
+			return err
+		}
+	}
+
+	// txInner가 널이 아니면 NFT관련해서 처리해야할 것
+	if tx.TxInner != nil {
+		if err := bc.handleNativeNFT(tx); err != nil {
+			return err
+		}
+	}
+
+	// 일반 트랜잭션
+	if tx.Value > 0 {
+		if err := bc.handleNativeTransfer(tx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
+	bc.stateLock.Lock()
+	for i := 0; i < len(b.Transactions); i++ {
+		if err := bc.handleTransaction(b.Transactions[i]); err != nil {
+			bc.logger.Log("error", err.Error())
+
+			b.Transactions[i] = b.Transactions[len(b.Transactions) - 1]
+			b.Transactions = b.Transactions[:len(b.Transactions) - 1]
+
+			continue
+		}
+	}
+	bc.stateLock.Unlock()
+
+	// fmt.Println("========ACOUNT STATE=========")
+	// fmt.Printf("%+v\n", bc.accountState.accounts)
+	// fmt.Println("========ACOUNT STATE=========")
+
 	bc.lock.Lock()
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
@@ -169,7 +207,6 @@ func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	for _, tx := range b.Transactions {
 		bc.txStore[tx.Hash(TxHasher{})] = tx
 	}
-
 	bc.lock.Unlock()
 
 	bc.logger.Log(

@@ -18,7 +18,23 @@ func TestSignBlock(t *testing.T) {
 	assert.NotNil(t, b.Signature)
 }
 
-func TestVerifyBlock(t *testing.T) {
+func TestVerifyBlockTamperHeight(t *testing.T) {
+	privKey := crypto.GeneratePrivateKey()
+	b := randomBlock(t, 0, types.Hash{})
+
+	assert.Nil(t, b.Sign(privKey))
+	assert.Nil(t, b.Verify())
+	b.hash = types.Hash{}
+	
+	bHeader := b.Header.Bytes()
+	b.Header.Version = 1000
+	
+	// b.hash = types.Hash{}
+
+	assert.NotNil(t, b.Verify())
+}
+
+func TestVerifyBlockTamperValidator(t *testing.T) {
 	privKey := crypto.GeneratePrivateKey()
 	b := randomBlock(t, 0, types.Hash{})
 
@@ -27,9 +43,6 @@ func TestVerifyBlock(t *testing.T) {
 
 	otherPrivKey := crypto.GeneratePrivateKey()
 	b.Validator = otherPrivKey.PublicKey()
-	assert.NotNil(t, b.Verify())
-
-	b.Height = 100
 	assert.NotNil(t, b.Verify())
 }
 
@@ -40,7 +53,16 @@ func TestDecodeEncodeBlock(t *testing.T) {
 
 	bDecode := new(Block)
 	assert.Nil(t, bDecode.Decode(NewGobBlockDecoder(buf)))
-	assert.Equal(t, b, bDecode)
+	
+	assert.Equal(t, b.Header, bDecode.Header)
+
+	for i := 0; i < len(b.Transactions); i++ {
+		b.Transactions[i].hash = types.Hash{}
+		assert.Equal(t, b.Transactions[i], bDecode.Transactions[i])
+	}
+
+	assert.Equal(t, b.Validator, bDecode.Validator)
+	assert.Equal(t, b.Signature, bDecode.Signature)
 }
 
 func randomBlock(t *testing.T, height uint32, prevBlockHash types.Hash) *Block {

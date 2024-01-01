@@ -34,7 +34,7 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 
-	if err := sendTransaction(); err != nil {
+	if err := sendTransaction(validatorPrivKey); err != nil {
 		panic(err)
 	}
 
@@ -53,9 +53,9 @@ func main() {
 	select {}
 }
 
-func sendTransaction() error {
-	privKey := crypto.GeneratePrivateKey()
+func sendTransaction(privKey crypto.PrivateKey) error {
 	toPrivKey := crypto.GeneratePrivateKey()
+
 	tx := core.NewTransaction(nil)
 	tx.To = toPrivKey.PublicKey()
 	tx.Value = 666
