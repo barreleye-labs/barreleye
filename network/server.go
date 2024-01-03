@@ -35,8 +35,8 @@ type Server struct {
 	TCPTransport *TCPTransport
 	peerCh       chan *TCPPeer
 
-	mu 			 sync.RWMutex
-	peerMap      map[net.Addr]*TCPPeer
+	mu      sync.RWMutex
+	peerMap map[net.Addr]*TCPPeer
 
 	ServerOpts
 	mempool     *TxPool
@@ -44,7 +44,7 @@ type Server struct {
 	isValidator bool
 	rpcCh       chan RPC
 	quitCh      chan struct{}
-	txChan		chan *core.Transaction
+	txChan      chan *core.Transaction
 }
 
 func NewServer(opts ServerOpts) (*Server, error) {
@@ -68,7 +68,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 
 	if len(opts.APIListenAddr) > 0 {
 		apiServerCfg := api.ServerConfig{
-			Logger: opts.Logger,
+			Logger:     opts.Logger,
 			ListenAddr: opts.APIListenAddr,
 		}
 		apiServer := api.NewServer(apiServerCfg, chain, txChan)
@@ -90,7 +90,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		isValidator:  opts.PrivateKey != nil,
 		rpcCh:        make(chan RPC),
 		quitCh:       make(chan struct{}, 1),
-		txChan: 	  txChan,
+		txChan:       txChan,
 	}
 
 	s.TCPTransport.peerCh = peerCh
@@ -183,7 +183,7 @@ func (s *Server) validatorLoop() {
 
 	for {
 		fmt.Println("creating new block")
-		
+
 		if err := s.createNewBlock(); err != nil {
 			s.Logger.Log("create block error", err)
 		}
@@ -215,7 +215,7 @@ func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) 
 	s.Logger.Log("msg", "received getBlocks message", "from", from)
 
 	var (
-		blocks 	  = []*core.Block{}
+		blocks    = []*core.Block{}
 		ourHeight = s.chain.Height()
 	)
 
@@ -299,7 +299,7 @@ func (s *Server) processStatusMessage(from net.Addr, data *StatusMessage) error 
 	}
 
 	go s.requestBlocksLoop(from)
-	
+
 	return nil
 }
 
@@ -354,7 +354,7 @@ func (s *Server) processTransaction(tx *core.Transaction) error {
 	// s.Logger.Log(
 	// 	"msg", "adding new tx to mempool",
 	// 	"hash", hash,
-	// 	"mempoolPending", s.memPool.PendingCount(),
+	// 	"mempoolPending", s.mempool.PendingCount(),
 	// )
 
 	go s.broadcastTx(tx)
@@ -371,13 +371,13 @@ func (s *Server) requestBlocksLoop(peer net.Addr) error {
 	for {
 		ourHeight := s.chain.Height()
 
-		s.Logger.Log("msg", "requesting new blocks", "requesting height", ourHeight + 1)
-		
+		s.Logger.Log("msg", "requesting new blocks", "requesting height", ourHeight+1)
+
 		getBlocksMessage := &GetBlocksMessage{
 			From: ourHeight + 1,
-			To: 0,
+			To:   0,
 		}
-		
+
 		buf := new(bytes.Buffer)
 		if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
 			return err
@@ -396,7 +396,7 @@ func (s *Server) requestBlocksLoop(peer net.Addr) error {
 			s.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
 		}
 
-		<- ticker.C
+		<-ticker.C
 	}
 }
 

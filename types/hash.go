@@ -8,8 +8,8 @@ import (
 
 type Hash [32]uint8
 
-func (h Hash) IsZero() bool{
-	for i := 0; i< 32; i++ {
+func (h Hash) IsZero() bool {
+	for i := 0; i < 32; i++ {
 		if h[i] != 0 {
 			return false
 		}

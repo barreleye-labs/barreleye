@@ -51,7 +51,7 @@ func (k PublicKey) Address() types.Address {
 }
 
 type Signature struct {
-	S *big.Int 
+	S *big.Int
 	R *big.Int
 }
 
@@ -60,12 +60,12 @@ func (sig Signature) String() string {
 	return hex.EncodeToString(b)
 }
 
-func (sig Signature) Verify(PubKey PublicKey, data []byte) bool {
-	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), PubKey)
+func (sig Signature) Verify(pubKey PublicKey, data []byte) bool {
+	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), pubKey)
 	key := &ecdsa.PublicKey{
 		Curve: elliptic.P256(),
-		X: x,
-		Y: y,
+		X:     x,
+		Y:     y,
 	}
 
 	return ecdsa.Verify(key, data, sig.R, sig.S)
