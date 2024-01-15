@@ -9,32 +9,35 @@ import (
 )
 
 type Blockchain struct {
-	logger    	 	log.Logger
-	store     	 	Storage
-	lock      	 	sync.RWMutex
-	headers   	 	[]*Header
-	blocks 	  	 	[]*Block
-	txStore 	 	map[types.Hash]*Transaction
-	blockStore   	map[types.Hash]*Block
+	logger     log.Logger
+	store      Storage
+	lock       sync.RWMutex
+	headers    []*Header
+	blocks     []*Block
+	txStore    map[types.Hash]*Transaction
+	blockStore map[types.Hash]*Block
 
-	stateLock		sync.RWMutex
+	AccountState *AccountState
+
+	stateLock       sync.RWMutex
 	collectionState map[types.Hash]*CollectionTx
-	minState		map[types.Hash]*MintTx
-	validator    	Validator
+	minState        map[types.Hash]*MintTx
+	validator       Validator
 	// TODO: make this on interface.
 	contractState *State
 }
 
-func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
+func NewBlockchain(l log.Logger, genesis *Block, ac *AccountState) (*Blockchain, error) {
 	bc := &Blockchain{
-		contractState: 	 NewState(),
-		headers:       	 []*Header{},
-		store:         	 NewMemorystore(),
-		logger:        	 l,
+		contractState:   NewState(),
+		headers:         []*Header{},
+		store:           NewMemorystore(),
+		logger:          l,
+		AccountState:    ac,
 		collectionState: make(map[types.Hash]*CollectionTx),
-		minState: 		 make(map[types.Hash]*MintTx),
-		blockStore:    	 make(map[types.Hash]*Block),
-		txStore: 	   	 make(map[types.Hash]*Transaction),
+		minState:        make(map[types.Hash]*MintTx),
+		blockStore:      make(map[types.Hash]*Block),
+		txStore:         make(map[types.Hash]*Transaction),
 	}
 	bc.validator = NewBlockValidator(bc)
 	err := bc.addBlockWithoutValidation(genesis)
@@ -63,26 +66,53 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 			}
 		}
 
-		hash := tx.Hash(TxHasher{})
-		switch t := tx.TxInner.(type) {
-		case CollectionTx:
-			bc.collectionState[hash] = &t
-			bc.logger.Log("msg", "created new NFT collection", "hash", hash)
-		case MintTx:
-			_, ok := bc.collectionState[t.Collection]
-			if !ok {
-				return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
+		// If the txInner of the transaction is not nil we need to handle
+		//	the native NFT implementation.
+		if tx.TxInner != nil {
+			if err := bc.handleNativeNFT(tx); err != nil {
+				return err
 			}
+		}
 
-			bc.minState[hash] = &t
-			
-			bc.logger.Log("msg", "created new NFT mint", "NFT", t.NFT, "collection", t.Collection)
-		default:
-			fmt.Printf("unsupported tx type %v", t)
+		// handle the native transaction here
+		if tx.Value > 0 {
+			if err := bc.handleNativeTransfter(tx); err != nil {
+				return nil
+			}
 		}
 	}
 
+	fmt.Printf("%+v\n", bc.AccountState)
+
 	return bc.addBlockWithoutValidation(b)
+}
+
+func (bc *Blockchain) handleNativeTransfter(tx *Transaction) error {
+	bc.logger.Log("msg", "handle native token transfer", "from", tx.From, "to", tx.To, "value", tx.Value)
+
+	return bc.AccountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
+}
+
+func (bc *Blockchain) handleNativeNFT(tx *Transaction) error {
+	hash := tx.Hash(TxHasher{})
+	switch t := tx.TxInner.(type) {
+	case CollectionTx:
+		bc.collectionState[hash] = &t
+		bc.logger.Log("msg", "created new NFT collection", "hash", hash)
+	case MintTx:
+		_, ok := bc.collectionState[t.Collection]
+		if !ok {
+			return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
+		}
+
+		bc.minState[hash] = &t
+
+		bc.logger.Log("msg", "created new NFT mint", "NFT", t.NFT, "collection", t.Collection)
+	default:
+		fmt.Printf("unsupported tx type %v", t)
+	}
+
+	return nil
 }
 
 func (bc *Blockchain) GetBlockByHash(hash types.Hash) (*Block, error) {
