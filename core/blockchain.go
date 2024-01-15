@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/types"
 	"github.com/go-kit/log"
 )
@@ -17,7 +18,7 @@ type Blockchain struct {
 	txStore    map[types.Hash]*Transaction
 	blockStore map[types.Hash]*Block
 
-	AccountState *AccountState
+	accountState *AccountState
 
 	stateLock       sync.RWMutex
 	collectionState map[types.Hash]*CollectionTx
@@ -27,13 +28,22 @@ type Blockchain struct {
 	contractState *State
 }
 
-func NewBlockchain(l log.Logger, genesis *Block, ac *AccountState) (*Blockchain, error) {
+func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
+	// We should create all states inside the scope of the newblockchain.
+
+	// TODO: read this from disk later on
+	accountState := NewAccountState()
+
+	coinbase := crypto.PublicKey{}
+	fmt.Println(coinbase.Address())
+	accountState.CreateAccount(coinbase.Address())
+
 	bc := &Blockchain{
 		contractState:   NewState(),
 		headers:         []*Header{},
 		store:           NewMemorystore(),
 		logger:          l,
-		AccountState:    ac,
+		accountState:    accountState,
 		collectionState: make(map[types.Hash]*CollectionTx),
 		minState:        make(map[types.Hash]*MintTx),
 		blockStore:      make(map[types.Hash]*Block),
@@ -54,43 +64,17 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 		return err
 	}
 
-	bc.stateLock.Lock()
-	defer bc.stateLock.Unlock()
-
-	for _, tx := range b.Transactions {
-		if len(tx.Data) > 0 {
-			bc.logger.Log("msg", "excuting code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
-			vm := NewVM(tx.Data, bc.contractState)
-			if err := vm.Run(); err != nil {
-				return err
-			}
-		}
-
-		// If the txInner of the transaction is not nil we need to handle
-		//	the native NFT implementation.
-		if tx.TxInner != nil {
-			if err := bc.handleNativeNFT(tx); err != nil {
-				return err
-			}
-		}
-
-		// handle the native transaction here
-		if tx.Value > 0 {
-			if err := bc.handleNativeTransfter(tx); err != nil {
-				return nil
-			}
-		}
-	}
-
-	fmt.Printf("%+v\n", bc.AccountState)
-
 	return bc.addBlockWithoutValidation(b)
 }
 
-func (bc *Blockchain) handleNativeTransfter(tx *Transaction) error {
-	bc.logger.Log("msg", "handle native token transfer", "from", tx.From, "to", tx.To, "value", tx.Value)
+func (bc *Blockchain) handleNativeTransfer(tx *Transaction) error {
+	bc.logger.Log(
+		"msg", "handle native token transfer",
+		"from", tx.From,
+		"to", tx.To,
+		"value", tx.Value)
 
-	return bc.AccountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
+	return bc.accountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
 }
 
 func (bc *Blockchain) handleNativeNFT(tx *Transaction) error {
@@ -175,6 +159,39 @@ func (bc *Blockchain) Height() uint32 {
 }
 
 func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
+	bc.stateLock.Lock()
+	for _, tx := range b.Transactions {
+		// If we have data inside execute that data on the VM.
+		if len(tx.Data) > 0 {
+			bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
+
+			vm := NewVM(tx.Data, bc.contractState)
+			if err := vm.Run(); err != nil {
+				return err
+			}
+		}
+
+		// If the txInner of the transaction is not nil we need to handle
+		// the native NFT implemtation.
+		if tx.TxInner != nil {
+			if err := bc.handleNativeNFT(tx); err != nil {
+				return err
+			}
+		}
+
+		// Handle the native transaction here
+		if tx.Value > 0 {
+			if err := bc.handleNativeTransfer(tx); err != nil {
+				return err
+			}
+		}
+	}
+	bc.stateLock.Unlock()
+
+	fmt.Println("========ACCOUNT STATE==============")
+	fmt.Printf("%+v\n", bc.accountState.accounts)
+	fmt.Println("========ACCOUNT STATE==============")
+
 	bc.lock.Lock()
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
