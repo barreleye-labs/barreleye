@@ -22,13 +22,16 @@ type Header struct {
 func (h *Header) Bytes() []byte {
 	buf := &bytes.Buffer{}
 	enc := gob.NewEncoder(buf)
-	enc.Encode(h)
+	if err := enc.Encode(h); err != nil {
+		panic(err)
+	}
 
 	return buf.Bytes()
 }
+
 type Block struct {
 	*Header
-	
+
 	Transactions []*Transaction
 	Validator    crypto.PublicKey
 	Signature    *crypto.Signature
@@ -50,12 +53,12 @@ func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, err
 		return nil, err
 	}
 
-	header := &Header {
-		Version: 1,
-		Height: prevHeader.Height + 1,
-		DataHash: dataHash,
+	header := &Header{
+		Version:       1,
+		Height:        prevHeader.Height + 1,
+		DataHash:      dataHash,
 		PrevBlockHash: BlockHasher{}.Hash(prevHeader),
-		Timestamp: time.Now().UnixNano(),
+		Timestamp:     time.Now().UnixNano(),
 	}
 
 	return NewBlock(header, txx)
@@ -84,7 +87,10 @@ func (b *Block) Verify() error {
 		return fmt.Errorf("block has no signature")
 	}
 
+	fmt.Printf("%+v\n", b.Header)
+
 	if !b.Signature.Verify(b.Validator, b.Header.Bytes()) {
+		// if !b.Signature.Verify(b.Validator, []byte("foo")) {
 		return fmt.Errorf("block has invalid signature")
 	}
 
@@ -98,6 +104,7 @@ func (b *Block) Verify() error {
 	if err != nil {
 		return err
 	}
+
 	if dataHash != b.DataHash {
 		return fmt.Errorf("block (%s) has an invalid data hash", b.Hash(BlockHasher{}))
 	}
