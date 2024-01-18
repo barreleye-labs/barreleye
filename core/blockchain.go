@@ -10,8 +10,9 @@ import (
 )
 
 type Blockchain struct {
-	logger     log.Logger
-	store      Storage
+	logger log.Logger
+	store  Storage
+	// TODO: double check this!
 	lock       sync.RWMutex
 	headers    []*Header
 	blocks     []*Block
@@ -22,9 +23,9 @@ type Blockchain struct {
 
 	stateLock       sync.RWMutex
 	collectionState map[types.Hash]*CollectionTx
-	minState        map[types.Hash]*MintTx
+	mintState       map[types.Hash]*MintTx
 	validator       Validator
-	// TODO: make this on interface.
+	// TODO: make this an interface.
 	contractState *State
 }
 
@@ -35,7 +36,6 @@ func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
 	accountState := NewAccountState()
 
 	coinbase := crypto.PublicKey{}
-	fmt.Println(coinbase.Address())
 	accountState.CreateAccount(coinbase.Address())
 
 	bc := &Blockchain{
@@ -45,7 +45,7 @@ func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
 		logger:          l,
 		accountState:    accountState,
 		collectionState: make(map[types.Hash]*CollectionTx),
-		minState:        make(map[types.Hash]*MintTx),
+		mintState:       make(map[types.Hash]*MintTx),
 		blockStore:      make(map[types.Hash]*Block),
 		txStore:         make(map[types.Hash]*Transaction),
 	}
@@ -79,6 +79,7 @@ func (bc *Blockchain) handleNativeTransfer(tx *Transaction) error {
 
 func (bc *Blockchain) handleNativeNFT(tx *Transaction) error {
 	hash := tx.Hash(TxHasher{})
+
 	switch t := tx.TxInner.(type) {
 	case CollectionTx:
 		bc.collectionState[hash] = &t
@@ -88,12 +89,11 @@ func (bc *Blockchain) handleNativeNFT(tx *Transaction) error {
 		if !ok {
 			return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
 		}
-
-		bc.minState[hash] = &t
+		bc.mintState[hash] = &t
 
 		bc.logger.Log("msg", "created new NFT mint", "NFT", t.NFT, "collection", t.Collection)
 	default:
-		fmt.Printf("unsupported tx type %v", t)
+		return fmt.Errorf("unsupported tx type %v", t)
 	}
 
 	return nil
@@ -158,39 +158,52 @@ func (bc *Blockchain) Height() uint32 {
 	return uint32(len(bc.headers) - 1)
 }
 
+func (bc *Blockchain) handleTransaction(tx *Transaction) error {
+	// If we have data inside execute that data on the VM.
+	if len(tx.Data) > 0 {
+		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
+
+		vm := NewVM(tx.Data, bc.contractState)
+		if err := vm.Run(); err != nil {
+			return err
+		}
+	}
+
+	// If the txInner of the transaction is not nil we need to handle
+	// the native NFT implemtation.
+	if tx.TxInner != nil {
+		if err := bc.handleNativeNFT(tx); err != nil {
+			return err
+		}
+	}
+
+	// Handle the native transaction here
+	if tx.Value > 0 {
+		if err := bc.handleNativeTransfer(tx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	bc.stateLock.Lock()
-	for _, tx := range b.Transactions {
-		// If we have data inside execute that data on the VM.
-		if len(tx.Data) > 0 {
-			bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
+	for i := 0; i < len(b.Transactions); i++ {
+		if err := bc.handleTransaction(b.Transactions[i]); err != nil {
+			bc.logger.Log("error", err.Error())
 
-			vm := NewVM(tx.Data, bc.contractState)
-			if err := vm.Run(); err != nil {
-				return err
-			}
-		}
+			b.Transactions[i] = b.Transactions[len(b.Transactions)-1]
+			b.Transactions = b.Transactions[:len(b.Transactions)-1]
 
-		// If the txInner of the transaction is not nil we need to handle
-		// the native NFT implemtation.
-		if tx.TxInner != nil {
-			if err := bc.handleNativeNFT(tx); err != nil {
-				return err
-			}
-		}
-
-		// Handle the native transaction here
-		if tx.Value > 0 {
-			if err := bc.handleNativeTransfer(tx); err != nil {
-				return err
-			}
+			continue
 		}
 	}
 	bc.stateLock.Unlock()
 
-	fmt.Println("========ACCOUNT STATE==============")
-	fmt.Printf("%+v\n", bc.accountState.accounts)
-	fmt.Println("========ACCOUNT STATE==============")
+	// fmt.Println("========ACCOUNT STATE==============")
+	// fmt.Printf("%+v\n", bc.accountState.accounts)
+	// fmt.Println("========ACCOUNT STATE==============")
 
 	bc.lock.Lock()
 	bc.headers = append(bc.headers, b.Header)
@@ -200,7 +213,6 @@ func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	for _, tx := range b.Transactions {
 		bc.txStore[tx.Hash(TxHasher{})] = tx
 	}
-
 	bc.lock.Unlock()
 
 	bc.logger.Log(

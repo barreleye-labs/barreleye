@@ -31,15 +31,15 @@ type MintTx struct {
 }
 
 type Transaction struct {
-	// Only used for native NFT Logic
+	// Only used for native NFT logic
 	TxInner any
 	// Any arbitrary data for the VM
-	To        crypto.PublicKey
 	Data      []byte
+	To        crypto.PublicKey
 	Value     uint64
 	From      crypto.PublicKey
 	Signature *crypto.Signature
-	Nounce    int64
+	Nonce     int64
 
 	// cached version of the tx data hash
 	hash types.Hash
@@ -47,8 +47,8 @@ type Transaction struct {
 
 func NewTransaction(data []byte) *Transaction {
 	return &Transaction{
-		Data:   data,
-		Nounce: rand.Int63n(1000000000000000),
+		Data:  data,
+		Nonce: rand.Int63n(1000000000000000),
 	}
 }
 
