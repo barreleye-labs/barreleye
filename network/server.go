@@ -133,7 +133,7 @@ func (s *Server) Start() {
 
 	s.bootstrapNetwork()
 
-	s.Logger.Log("msg", "accepting TCP connection on", "addr", s.ListenAddr, "id", s.ID)
+	s.Logger.Log("msg", "🤝 accepting TCP connection on", "addr", s.ListenAddr, "id", s.ID)
 
 free:
 	for {
@@ -148,7 +148,7 @@ free:
 				continue
 			}
 
-			s.Logger.Log("msg", "peer added to the server", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
+			s.Logger.Log("msg", "🙋 peer added to the server", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
 
 		case tx := <-s.txChan:
 			if err := s.processTransaction(tx); err != nil {
@@ -182,7 +182,7 @@ func (s *Server) validatorLoop() {
 	s.Logger.Log("msg", "Starting validator loop", "blockTime", s.BlockTime)
 
 	for {
-		fmt.Println("creating new block")
+		s.Logger.Log("msg", "🍀 creating new block")
 
 		if err := s.createNewBlock(); err != nil {
 			s.Logger.Log("create block error", err)
@@ -212,7 +212,7 @@ func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 }
 
 func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) error {
-	s.Logger.Log("msg", "received getBlocks message", "from", from)
+	s.Logger.Log("msg", "📬 received getBlocks message", "from", from)
 
 	var (
 		blocks    = []*core.Block{}
@@ -277,7 +277,7 @@ func (s *Server) broadcast(payload []byte) error {
 }
 
 func (s *Server) processBlocksMessage(from net.Addr, data *BlocksMessage) error {
-	s.Logger.Log("msg", "received BLOCKS!!!!!!!", "from", from)
+	s.Logger.Log("msg", "📦 received BLOCKS", "from", from, "aff:", data.Blocks)
 
 	for _, block := range data.Blocks {
 		if err := s.chain.AddBlock(block); err != nil {
@@ -290,7 +290,7 @@ func (s *Server) processBlocksMessage(from net.Addr, data *BlocksMessage) error 
 }
 
 func (s *Server) processStatusMessage(from net.Addr, data *StatusMessage) error {
-	s.Logger.Log("msg", "received STATUS message", "from", from)
+	s.Logger.Log("msg", "📬 received STATUS message", "from", from)
 
 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
 	if data.CurrentHeight <= s.chain.Height() {
@@ -304,7 +304,7 @@ func (s *Server) processStatusMessage(from net.Addr, data *StatusMessage) error 
 }
 
 func (s *Server) processGetStatusMessage(from net.Addr, data *GetStatusMessage) error {
-	s.Logger.Log("msg", "received getStatus message", "from", from)
+	s.Logger.Log("msg", "📬 received getStatus message", "from", from)
 
 	StatusMessage := &StatusMessage{
 		CurrentHeight: s.chain.Height(),
@@ -371,7 +371,7 @@ func (s *Server) requestBlocksLoop(peer net.Addr) error {
 	for {
 		ourHeight := s.chain.Height()
 
-		s.Logger.Log("msg", "requesting new blocks", "requesting height", ourHeight+1)
+		s.Logger.Log("msg", "👋 requesting block height from", ourHeight+1)
 
 		getBlocksMessage := &GetBlocksMessage{
 			From: ourHeight + 1,

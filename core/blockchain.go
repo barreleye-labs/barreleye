@@ -216,7 +216,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	bc.lock.Unlock()
 
 	bc.logger.Log(
-		"msg", "new block",
+		"msg", "🔗 add new block",
 		"hash", b.Hash(BlockHasher{}),
 		"height", b.Height,
 		"transactions", len(b.Transactions),

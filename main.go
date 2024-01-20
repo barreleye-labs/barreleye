@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -15,22 +17,53 @@ import (
 )
 
 func main() {
-	validatorPrivKey := crypto.GeneratePrivateKey()
-	localNode := makeServer("LOCAL_NODE", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
-	go localNode.Start()
+	fmt.Println("start")
 
-	remoteNode := makeServer("REMOTE_NODE", nil, ":4000", []string{":5000"}, "")
-	go remoteNode.Start()
+	var nodeName string = ""
+	flag.StringVar(&nodeName, "nodeName", "", "Node name")
+	flag.Parse()
+	fmt.Println("nono: ", nodeName)
 
-	remoteNodeB := makeServer("REMOTE_NODE_B", nil, ":5000", nil, "")
-	go remoteNodeB.Start()
+	// file, _ := os.Open("config/config.json")
+	// defer file.Close()
+	// decoder := json.NewDecoder(file)
+	// nodeInfo := config.NodeInfo{}
+	// err := decoder.Decode(&nodeInfo)
+	// if err != nil {
+	// fmt.Println("error:", err)
+	// }
 
-	go func() {
-		time.Sleep(11 * time.Second)
+	if nodeName == "node1" {
+		fmt.Println("aaaa")
+		validatorPrivKey := crypto.GeneratePrivateKey()
+		node := makeServer("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
+		node.Start()
+	} else if nodeName == "node2" {
+		node := makeServer("NODE2", nil, ":4000", []string{":3000"}, "")
+		node.Start()
+	} else if nodeName == "node3" {
+		node := makeServer("NODE3", nil, ":5000", []string{":4000"}, "")
+		node.Start()
+	}
 
-		lateNode := makeServer("LATE_NODE", nil, ":6000", []string{":4000"}, "")
-		go lateNode.Start()
-	}()
+	// fmt.Println("kyma:", nodeInfo.Node1.Endpoint)
+
+	// validatorPrivKey := crypto.GeneratePrivateKey()
+	// localNode := makeServer("LOCAL_NODE", &validatorPrivKey, "localhost:3000", []string{"localhost:4000"}, ":9000")
+	// go localNode.Start()
+
+	// remoteNode := makeServer("REMOTE_NODE", nil, "localhost:4000", []string{"localhost:5000"}, "")
+	// go remoteNode.Start()
+
+	// remoteNodeB := makeServer("REMOTE_NODE_B", nil, "localhost:5000", nil, "")
+	// go remoteNodeB.Start()
+
+	// go func() {
+	// 	time.Sleep(11 * time.Second)
+
+	// 	lateNode := makeServer("LATE_NODE", nil, ":6000", []string{"localhost:4000"}, "")
+	// 	go lateNode.Start()
+	// }()
 
 	time.Sleep(1 * time.Second)
 
@@ -78,7 +111,6 @@ func sendTransaction(privKey crypto.PrivateKey) error {
 	_, err = client.Do(req)
 
 	return err
-
 }
 
 func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *network.Server {
@@ -104,7 +136,6 @@ func createCollectionTx(privKey crypto.PrivateKey) types.Hash {
 		Fee:      200,
 		MetaData: []byte("chicken and egg collection!"),
 	}
-
 	tx.Sign(privKey)
 
 	buf := &bytes.Buffer{}

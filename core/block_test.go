@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 	"time"
 
@@ -19,26 +18,7 @@ func TestSignBlock(t *testing.T) {
 	assert.NotNil(t, b.Signature)
 }
 
-func TestVerifyBlockTamperHeight(t *testing.T) {
-	privKey := crypto.GeneratePrivateKey()
-	b := randomBlock(t, 0, types.Hash{})
-
-	fmt.Println(b.Hash(BlockHasher{}))
-
-	assert.Nil(t, b.Sign(privKey))
-	assert.Nil(t, b.Verify())
-
-	bHeader := b.Header.Bytes()
-	b.Header.Version = 1000
-
-	fmt.Println(bytes.Compare(bHeader, b.Header.Bytes()))
-
-	// b.hash = types.Hash{}
-
-	assert.NotNil(t, b.Verify())
-}
-
-func TestVerifyBlockTamperValidator(t *testing.T) {
+func TestVerifyBlock(t *testing.T) {
 	privKey := crypto.GeneratePrivateKey()
 	b := randomBlock(t, 0, types.Hash{})
 

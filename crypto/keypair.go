@@ -40,6 +40,7 @@ func NewPrivateKeyFromReader(r io.Reader) PrivateKey {
 }
 
 func GeneratePrivateKey() PrivateKey {
+
 	return NewPrivateKeyFromReader(rand.Reader)
 }
 
