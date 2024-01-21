@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/barreleye-labs/barreleye/barreldb"
 	"sync"
 
 	"github.com/barreleye-labs/barreleye/crypto"
@@ -30,6 +31,10 @@ type Blockchain struct {
 }
 
 func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
+	db, _ := barreldb.New()
+	_ = db.Put([]byte("김"), []byte("영민"))
+	data, _ := db.Get([]byte("김"))
+	fmt.Println("valueaaaa: ", string(data))
 	// We should create all states inside the scope of the newblockchain.
 
 	// TODO: read this from disk later on
