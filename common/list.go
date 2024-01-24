@@ -1,4 +1,4 @@
-package types
+package common
 
 import (
 	"fmt"
@@ -10,13 +10,13 @@ type List[T any] struct {
 }
 
 func NewList[T any]() *List[T] {
-	return &List[T] {
+	return &List[T]{
 		Data: []T{},
 	}
 }
 
 func (l *List[T]) Get(index int) T {
-	if index > len(l.Data) - 1 {
+	if index > len(l.Data)-1 {
 		err := fmt.Sprintf("the given index (%d) is higher than the length (%d)", index, len(l.Data))
 		panic(err)
 	}

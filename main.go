@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
+	types2 "github.com/barreleye-labs/barreleye/core/types"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/network"
-	"github.com/barreleye-labs/barreleye/types"
 	"github.com/barreleye-labs/barreleye/util"
 )
 
@@ -89,7 +89,7 @@ func main() {
 func sendTransaction(privKey crypto.PrivateKey) error {
 	toPrivKey := crypto.GeneratePrivateKey()
 
-	tx := core.NewTransaction(nil)
+	tx := types2.NewTransaction(nil)
 	tx.To = toPrivKey.PublicKey()
 	tx.Value = 666
 
@@ -98,7 +98,7 @@ func sendTransaction(privKey crypto.PrivateKey) error {
 	}
 
 	buf := &bytes.Buffer{}
-	if err := tx.Encode(core.NewGobTxEncoder(buf)); err != nil {
+	if err := tx.Encode(types2.NewGobTxEncoder(buf)); err != nil {
 		panic(err)
 	}
 
@@ -130,16 +130,16 @@ func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []strin
 	return s
 }
 
-func createCollectionTx(privKey crypto.PrivateKey) types.Hash {
-	tx := core.NewTransaction(nil)
-	tx.TxInner = core.CollectionTx{
+func createCollectionTx(privKey crypto.PrivateKey) common.Hash {
+	tx := types2.NewTransaction(nil)
+	tx.TxInner = types2.CollectionTx{
 		Fee:      200,
 		MetaData: []byte("chicken and egg collection!"),
 	}
 	tx.Sign(privKey)
 
 	buf := &bytes.Buffer{}
-	if err := tx.Encode(core.NewGobTxEncoder(buf)); err != nil {
+	if err := tx.Encode(types2.NewGobTxEncoder(buf)); err != nil {
 		panic(err)
 	}
 
@@ -154,10 +154,10 @@ func createCollectionTx(privKey crypto.PrivateKey) types.Hash {
 		panic(err)
 	}
 
-	return tx.Hash(core.TxHasher{})
+	return tx.Hash(types2.TxHasher{})
 }
 
-func nftMinter(privKey crypto.PrivateKey, collection types.Hash) {
+func nftMinter(privKey crypto.PrivateKey, collection common.Hash) {
 	metaData := map[string]any{
 		"power":  8,
 		"health": 100,
@@ -170,8 +170,8 @@ func nftMinter(privKey crypto.PrivateKey, collection types.Hash) {
 		panic(err)
 	}
 
-	tx := core.NewTransaction(nil)
-	tx.TxInner = core.MintTx{
+	tx := types2.NewTransaction(nil)
+	tx.TxInner = types2.MintTx{
 		Fee:             200,
 		NFT:             util.RandomHash(),
 		MetaData:        metaBuf.Bytes(),
@@ -181,7 +181,7 @@ func nftMinter(privKey crypto.PrivateKey, collection types.Hash) {
 	tx.Sign(privKey)
 
 	buf := &bytes.Buffer{}
-	if err := tx.Encode(core.NewGobTxEncoder(buf)); err != nil {
+	if err := tx.Encode(types2.NewGobTxEncoder(buf)); err != nil {
 		panic(err)
 	}
 

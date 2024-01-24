@@ -1,13 +1,13 @@
 package util
 
 import (
+	"github.com/barreleye-labs/barreleye/common"
+	types2 "github.com/barreleye-labs/barreleye/core/types"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,40 +17,40 @@ func RandomBytes(size int) []byte {
 	return token
 }
 
-func RandomHash() types.Hash {
-	return types.HashFromBytes(RandomBytes(32))
+func RandomHash() common.Hash {
+	return common.HashFromBytes(RandomBytes(32))
 }
 
 // NewRandomTransaction return a new random transaction whithout signature.
-func NewRandomTransaction(size int) *core.Transaction {
-	return core.NewTransaction(RandomBytes(size))
+func NewRandomTransaction(size int) *types2.Transaction {
+	return types2.NewTransaction(RandomBytes(size))
 }
 
-func NewRandomTransactionWithSignature(t *testing.T, privKey crypto.PrivateKey, size int) *core.Transaction {
+func NewRandomTransactionWithSignature(t *testing.T, privKey crypto.PrivateKey, size int) *types2.Transaction {
 	tx := NewRandomTransaction(size)
 	assert.Nil(t, tx.Sign(privKey))
 	return tx
 }
 
-func NewRandomBlock(t *testing.T, height uint32, prevBlockHash types.Hash) *core.Block {
+func NewRandomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *types2.Block {
 	txSigner := crypto.GeneratePrivateKey()
 	tx := NewRandomTransactionWithSignature(t, txSigner, 100)
-	header := &core.Header{
+	header := &types2.Header{
 		Version:       1,
 		PrevBlockHash: prevBlockHash,
 		Height:        height,
 		Timestamp:     time.Now().UnixNano(),
 	}
-	b, err := core.NewBlock(header, []*core.Transaction{tx})
+	b, err := types2.NewBlock(header, []*types2.Transaction{tx})
 	assert.Nil(t, err)
-	dataHash, err := core.CalculateDataHash(b.Transactions)
+	dataHash, err := types2.CalculateDataHash(b.Transactions)
 	assert.Nil(t, err)
 	b.Header.DataHash = dataHash
 
 	return b
 }
 
-func NewRandomBlockWithSignature(t *testing.T, pk crypto.PrivateKey, height uint32, prevHash types.Hash) *core.Block {
+func NewRandomBlockWithSignature(t *testing.T, pk crypto.PrivateKey, height uint32, prevHash common.Hash) *types2.Block {
 	b := NewRandomBlock(t, height, prevHash)
 	assert.Nil(t, b.Sign(pk))
 

@@ -1,12 +1,12 @@
-package core
+package types
 
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/barreleye-labs/barreleye/common"
 	"testing"
 
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +22,7 @@ func TestVerifyTransactionWithTamper(t *testing.T) {
 	tx.Value = 666
 
 	assert.Nil(t, tx.Sign(fromPrivKey))
-	tx.hash = types.Hash{}
+	tx.hash = common.Hash{}
 
 	tx.To = hackerPrivKey.PublicKey()
 
@@ -40,7 +40,7 @@ func TestNFTTransaction(t *testing.T) {
 		TxInner: collectionTx,
 	}
 	tx.Sign(privKey)
-	tx.hash = types.Hash{}
+	tx.hash = common.Hash{}
 
 	buf := new(bytes.Buffer)
 	assert.Nil(t, gob.NewEncoder(buf).Encode(tx))
@@ -90,7 +90,7 @@ func TestTxEncodeDecode(t *testing.T) {
 	tx := randomTxWithSignature(t)
 	buf := &bytes.Buffer{}
 	assert.Nil(t, tx.Encode(NewGobTxEncoder(buf)))
-	tx.hash = types.Hash{}
+	tx.hash = common.Hash{}
 
 	txDecoded := new(Transaction)
 	assert.Nil(t, txDecoded.Decode(NewGobTxDecoder(buf)))

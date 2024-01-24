@@ -1,28 +1,27 @@
-package core
+package types
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-
-	"github.com/barreleye-labs/barreleye/types"
+	"github.com/barreleye-labs/barreleye/common"
 )
 
 type Hasher[T any] interface {
-	Hash(T) types.Hash
+	Hash(T) common.Hash
 }
 
 type BlockHasher struct{}
 
-func (BlockHasher) Hash(b *Header) types.Hash {
+func (BlockHasher) Hash(b *Header) common.Hash {
 	h := sha256.Sum256(b.Bytes())
-	return types.Hash(h)
+	return common.Hash(h)
 }
 
 type TxHasher struct{}
 
 // Hash will hash the whole bytes of the TX no exception.
-func (TxHasher) Hash(tx *Transaction) types.Hash {
+func (TxHasher) Hash(tx *Transaction) common.Hash {
 	buf := new(bytes.Buffer)
 
 	binary.Write(buf, binary.LittleEndian, tx.Data)
@@ -31,5 +30,5 @@ func (TxHasher) Hash(tx *Transaction) types.Hash {
 	binary.Write(buf, binary.LittleEndian, tx.From)
 	binary.Write(buf, binary.LittleEndian, tx.Nonce)
 
-	return types.Hash(sha256.Sum256(buf.Bytes()))
+	return common.Hash(sha256.Sum256(buf.Bytes()))
 }

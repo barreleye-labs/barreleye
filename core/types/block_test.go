@@ -1,18 +1,18 @@
-package core
+package types
 
 import (
 	"bytes"
+	"github.com/barreleye-labs/barreleye/common"
 	"testing"
 	"time"
 
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSignBlock(t *testing.T) {
 	privKey := crypto.GeneratePrivateKey()
-	b := randomBlock(t, 0, types.Hash{})
+	b := randomBlock(t, 0, common.Hash{})
 
 	assert.Nil(t, b.Sign(privKey))
 	assert.NotNil(t, b.Signature)
@@ -20,7 +20,7 @@ func TestSignBlock(t *testing.T) {
 
 func TestVerifyBlock(t *testing.T) {
 	privKey := crypto.GeneratePrivateKey()
-	b := randomBlock(t, 0, types.Hash{})
+	b := randomBlock(t, 0, common.Hash{})
 
 	assert.Nil(t, b.Sign(privKey))
 	assert.Nil(t, b.Verify())
@@ -34,7 +34,7 @@ func TestVerifyBlock(t *testing.T) {
 }
 
 func TestDecodeEncodeBlock(t *testing.T) {
-	b := randomBlock(t, 1, types.Hash{})
+	b := randomBlock(t, 1, common.Hash{})
 	buf := &bytes.Buffer{}
 	assert.Nil(t, b.Encode(NewGobBlockEncoder(buf)))
 
@@ -44,7 +44,7 @@ func TestDecodeEncodeBlock(t *testing.T) {
 	assert.Equal(t, b.Header, bDecode.Header)
 
 	for i := 0; i < len(b.Transactions); i++ {
-		b.Transactions[i].hash = types.Hash{}
+		b.Transactions[i].hash = common.Hash{}
 		assert.Equal(t, b.Transactions[i], bDecode.Transactions[i])
 	}
 
@@ -52,7 +52,7 @@ func TestDecodeEncodeBlock(t *testing.T) {
 	assert.Equal(t, b.Signature, bDecode.Signature)
 }
 
-func randomBlock(t *testing.T, height uint32, prevBlockHash types.Hash) *Block {
+func randomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *Block {
 	privKey := crypto.GeneratePrivateKey()
 	tx := randomTxWithSignature(t)
 	header := &Header{

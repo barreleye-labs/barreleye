@@ -3,11 +3,12 @@ package api
 import (
 	"encoding/gob"
 	"encoding/hex"
+	"github.com/barreleye-labs/barreleye/common"
+	types2 "github.com/barreleye-labs/barreleye/core/types"
 	"net/http"
 	"strconv"
 
 	"github.com/barreleye-labs/barreleye/core"
-	"github.com/barreleye-labs/barreleye/types"
 	"github.com/go-kit/log"
 	"github.com/labstack/echo/v4"
 )
@@ -22,34 +23,34 @@ type APIError struct {
 }
 
 type Block struct {
-	Hash		  string
-	Version		  uint32
-	DataHash 	  string
+	Hash          string
+	Version       uint32
+	DataHash      string
 	PrevBlockHash string
-	Height		  uint32
-	Timestamp	  int64
-	Validator 	  string
-	Signature	  string
+	Height        uint32
+	Timestamp     int64
+	Validator     string
+	Signature     string
 
-	TxResponse	  TxResponse
+	TxResponse TxResponse
 }
 
 type ServerConfig struct {
-	Logger	   log.Logger
+	Logger     log.Logger
 	ListenAddr string
 }
 
 type Server struct {
-	txChan chan *core.Transaction
+	txChan chan *types2.Transaction
 	ServerConfig
 	bc *core.Blockchain
 }
 
-func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *core.Transaction) *Server {
+func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types2.Transaction) *Server {
 	return &Server{
 		ServerConfig: cfg,
-		bc:			  bc,
-		txChan: 	  txChan,
+		bc:           bc,
+		txChan:       txChan,
 	}
 }
 
@@ -64,12 +65,12 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) handlePostTx(c echo.Context) error {
-	tx := &core.Transaction{}
+	tx := &types2.Transaction{}
 	if err := gob.NewDecoder(c.Request().Body).Decode(tx); err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 	s.txChan <- tx
-	
+
 	return nil
 }
 
@@ -81,9 +82,9 @@ func (s *Server) handleGetTx(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	tx, err := s.bc.GetTxByHash(types.HashFromBytes(b))
+	tx, err := s.bc.GetTxByHash(common.HashFromBytes(b))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error:  err.Error()})
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, tx)
@@ -98,7 +99,7 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 		block, err := s.bc.GetBlock(uint32(height))
 		if err != nil {
 			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
-			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})	// 위와 같은 의미. 코드 리팩토링
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
 		}
 
 		return c.JSON(http.StatusOK, intoJSONBlock(block))
@@ -111,7 +112,7 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	block, err := s.bc.GetBlockByHash(types.HashFromBytes(b))
+	block, err := s.bc.GetBlockByHash(common.HashFromBytes(b))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
@@ -119,25 +120,25 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 	return c.JSON(http.StatusOK, intoJSONBlock(block))
 }
 
-func intoJSONBlock(block *core.Block) Block {
+func intoJSONBlock(block *types2.Block) Block {
 	txResponse := TxResponse{
 		TxCount: uint(len(block.Transactions)),
-		Hashes: make([]string, len(block.Transactions)),
+		Hashes:  make([]string, len(block.Transactions)),
 	}
 
 	for i := 0; i < int(txResponse.TxCount); i++ {
-		txResponse.Hashes[i] = block.Transactions[i].Hash(core.TxHasher{}).String()
+		txResponse.Hashes[i] = block.Transactions[i].Hash(types2.TxHasher{}).String()
 	}
 
 	return Block{
-		Hash: 		   block.Hash(core.BlockHasher{}).String(),
-		Version: 	   block.Header.Version,
-		Height: 	   block.Header.Height,
-		DataHash: 	   block.Header.DataHash.String(),
+		Hash:          block.Hash(types2.BlockHasher{}).String(),
+		Version:       block.Header.Version,
+		Height:        block.Header.Height,
+		DataHash:      block.Header.DataHash.String(),
 		PrevBlockHash: block.PrevBlockHash.String(),
-		Timestamp: 	   block.Timestamp,
-		Validator: 	   block.Validator.Address().String(),
-		Signature: 	   block.Signature.String(),
+		Timestamp:     block.Timestamp,
+		Validator:     block.Validator.Address().String(),
+		Signature:     block.Signature.String(),
 		TxResponse:    txResponse,
 	}
 }
