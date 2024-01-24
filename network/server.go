@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
+	types2 "github.com/barreleye-labs/barreleye/core/types"
 	"net"
 	"os"
 	"sync"
@@ -12,7 +14,6 @@ import (
 	"github.com/barreleye-labs/barreleye/api"
 	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/types"
 	"github.com/go-kit/log"
 )
 
@@ -44,7 +45,7 @@ type Server struct {
 	isValidator bool
 	rpcCh       chan RPC
 	quitCh      chan struct{}
-	txChan      chan *core.Transaction
+	txChan      chan *types2.Transaction
 }
 
 func NewServer(opts ServerOpts) (*Server, error) {
@@ -64,7 +65,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 		return nil, err
 	}
 
-	txChan := make(chan *core.Transaction)
+	txChan := make(chan *types2.Transaction)
 
 	if len(opts.APIListenAddr) > 0 {
 		apiServerCfg := api.ServerConfig{
@@ -194,9 +195,9 @@ func (s *Server) validatorLoop() {
 
 func (s *Server) ProcessMessage(msg *DecodedMessage) error {
 	switch t := msg.Data.(type) {
-	case *core.Transaction:
+	case *types2.Transaction:
 		return s.processTransaction(t)
-	case *core.Block:
+	case *types2.Block:
 		return s.processBlock(t)
 	case *GetStatusMessage:
 		return s.processGetStatusMessage(msg.From, t)
@@ -215,7 +216,7 @@ func (s *Server) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) 
 	s.Logger.Log("msg", "📬 received getBlocks message", "from", from)
 
 	var (
-		blocks    = []*core.Block{}
+		blocks    = []*types2.Block{}
 		ourHeight = s.chain.Height()
 	)
 
@@ -329,7 +330,7 @@ func (s *Server) processGetStatusMessage(from net.Addr, data *GetStatusMessage) 
 	return peer.Send(msg.Bytes())
 }
 
-func (s *Server) processBlock(b *core.Block) error {
+func (s *Server) processBlock(b *types2.Block) error {
 	if err := s.chain.AddBlock(b); err != nil {
 		s.Logger.Log("error", err.Error())
 		return err
@@ -340,8 +341,8 @@ func (s *Server) processBlock(b *core.Block) error {
 	return nil
 }
 
-func (s *Server) processTransaction(tx *core.Transaction) error {
-	hash := tx.Hash(core.TxHasher{})
+func (s *Server) processTransaction(tx *types2.Transaction) error {
+	hash := tx.Hash(types2.TxHasher{})
 
 	if s.mempool.Contains(hash) {
 		return nil
@@ -400,9 +401,9 @@ func (s *Server) requestBlocksLoop(peer net.Addr) error {
 	}
 }
 
-func (s *Server) broadcastBlock(b *core.Block) error {
+func (s *Server) broadcastBlock(b *types2.Block) error {
 	buf := &bytes.Buffer{}
-	if err := b.Encode(core.NewGobBlockEncoder(buf)); err != nil {
+	if err := b.Encode(types2.NewGobBlockEncoder(buf)); err != nil {
 		return err
 	}
 
@@ -411,9 +412,9 @@ func (s *Server) broadcastBlock(b *core.Block) error {
 	return s.broadcast(msg.Bytes())
 }
 
-func (s *Server) broadcastTx(tx *core.Transaction) error {
+func (s *Server) broadcastTx(tx *types2.Transaction) error {
 	buf := &bytes.Buffer{}
-	if err := tx.Encode(core.NewGobTxEncoder(buf)); err != nil {
+	if err := tx.Encode(types2.NewGobTxEncoder(buf)); err != nil {
 		return err
 	}
 
@@ -432,7 +433,7 @@ func (s *Server) createNewBlock() error {
 	// 트랜잭션을 아직 구체화하지 않았기 때문.
 	txx := s.mempool.Pending()
 
-	block, err := core.NewBlockFromPrevHeader(currentHeader, txx)
+	block, err := types2.NewBlockFromPrevHeader(currentHeader, txx)
 	if err != nil {
 		return err
 	}
@@ -452,18 +453,18 @@ func (s *Server) createNewBlock() error {
 	return nil
 }
 
-func genesisBlock() *core.Block {
-	header := &core.Header{
+func genesisBlock() *types2.Block {
+	header := &types2.Header{
 		Version:   1,
-		DataHash:  types.Hash{},
+		DataHash:  common.Hash{},
 		Height:    0,
 		Timestamp: 000000,
 	}
 
-	b, _ := core.NewBlock(header, nil)
+	b, _ := types2.NewBlock(header, nil)
 
 	coinbase := crypto.PublicKey{}
-	tx := core.NewTransaction(nil)
+	tx := types2.NewTransaction(nil)
 	tx.From = coinbase
 	tx.To = coinbase
 	tx.Value = 10_000_000

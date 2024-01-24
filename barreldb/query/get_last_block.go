@@ -1,7 +1,9 @@
 package query
 
-import "github.com/barreleye-labs/barreleye/core"
+import (
+	"github.com/barreleye-labs/barreleye/core/types"
+)
 
-func GetLastBlock() core.Block {
-	return core.Block{}
+func GetLastBlock() types.Block {
+	return types.Block{}
 }

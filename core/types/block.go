@@ -1,20 +1,20 @@
-package core
+package types
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
 	"time"
 
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/types"
 )
 
 type Header struct {
 	Version       uint32
-	DataHash      types.Hash
-	PrevBlockHash types.Hash
+	DataHash      common.Hash
+	PrevBlockHash common.Hash
 	Height        uint32
 	Timestamp     int64
 }
@@ -35,7 +35,7 @@ type Block struct {
 	Signature    *crypto.Signature
 
 	// Cached version of the header hash
-	hash types.Hash
+	hash common.Hash
 }
 
 func NewBlock(h *Header, txx []*Transaction) (*Block, error) {
@@ -116,7 +116,7 @@ func (b *Block) Encode(enc Encoder[*Block]) error {
 	return enc.Encode(b)
 }
 
-func (b *Block) Hash(hasher Hasher[*Header]) types.Hash {
+func (b *Block) Hash(hasher Hasher[*Header]) common.Hash {
 	if b.hash.IsZero() {
 		b.hash = hasher.Hash(b.Header)
 	}
@@ -124,7 +124,7 @@ func (b *Block) Hash(hasher Hasher[*Header]) types.Hash {
 	return b.hash
 }
 
-func CalculateDataHash(txx []*Transaction) (hash types.Hash, err error) {
+func CalculateDataHash(txx []*Transaction) (hash common.Hash, err error) {
 	buf := &bytes.Buffer{}
 
 	for _, tx := range txx {

@@ -1,4 +1,4 @@
-package core
+package types
 
 import (
 	"encoding/gob"
@@ -18,7 +18,7 @@ type GobTxEncoder struct {
 }
 
 func NewGobTxEncoder(w io.Writer) *GobTxEncoder {
-	return &GobTxEncoder {
+	return &GobTxEncoder{
 		w: w,
 	}
 }
@@ -60,7 +60,7 @@ type GobBlockDecoder struct {
 }
 
 func NewGobBlockDecoder(r io.Reader) *GobBlockDecoder {
-	return &GobBlockDecoder {
+	return &GobBlockDecoder{
 		r: r,
 	}
 }

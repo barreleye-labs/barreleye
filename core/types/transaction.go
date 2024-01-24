@@ -1,12 +1,12 @@
-package core
+package types
 
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
 	"math/rand"
 
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/types"
 )
 
 type TxType byte
@@ -23,8 +23,8 @@ type CollectionTx struct {
 
 type MintTx struct {
 	Fee             int64
-	NFT             types.Hash
-	Collection      types.Hash
+	NFT             common.Hash
+	Collection      common.Hash
 	MetaData        []byte
 	CollectionOwner crypto.PublicKey
 	Signature       crypto.Signature
@@ -42,7 +42,7 @@ type Transaction struct {
 	Nonce     int64
 
 	// cached version of the tx data hash
-	hash types.Hash
+	hash common.Hash
 }
 
 func NewTransaction(data []byte) *Transaction {
@@ -52,7 +52,7 @@ func NewTransaction(data []byte) *Transaction {
 	}
 }
 
-func (tx *Transaction) Hash(hasher Hasher[*Transaction]) types.Hash {
+func (tx *Transaction) Hash(hasher Hasher[*Transaction]) common.Hash {
 	if tx.hash.IsZero() {
 		tx.hash = hasher.Hash(tx)
 	}

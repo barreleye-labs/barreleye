@@ -1,14 +1,13 @@
 package network
 
 import (
+	"github.com/barreleye-labs/barreleye/common"
+	types2 "github.com/barreleye-labs/barreleye/core/types"
 	"sync"
-
-	"github.com/barreleye-labs/barreleye/core"
-	"github.com/barreleye-labs/barreleye/types"
 )
 
 type TxPool struct {
-	all	*TxSortedMap
+	all     *TxSortedMap
 	pending *TxSortedMap
 	// 풀 사이즈
 	// 풀이 가득차면 가장 오래된 트랜잭션부터 푸루닝할 것.
@@ -17,31 +16,31 @@ type TxPool struct {
 
 func NewTxPool(maxLength int) *TxPool {
 	return &TxPool{
-		all: 	   NewTxSortedMap(),
+		all:       NewTxSortedMap(),
 		pending:   NewTxSortedMap(),
 		maxLength: maxLength,
 	}
 }
 
-func (p *TxPool) Add(tx *core.Transaction) {
+func (p *TxPool) Add(tx *types2.Transaction) {
 	// 푸루닝
 	if p.all.Count() == p.maxLength {
 		oldest := p.all.First()
-		p.all.Remove(oldest.Hash(core.TxHasher{}))
+		p.all.Remove(oldest.Hash(types2.TxHasher{}))
 	}
 
-	if !p.all.Contains(tx.Hash(core.TxHasher{})) {
+	if !p.all.Contains(tx.Hash(types2.TxHasher{})) {
 		p.all.Add(tx)
 		p.pending.Add(tx)
 	}
 }
 
-func (p *TxPool) Contains(hash types.Hash) bool {
+func (p *TxPool) Contains(hash common.Hash) bool {
 	return p.all.Contains(hash)
 }
 
 // Pending returns a slice of transactions that are in the pending pool
-func (p *TxPool) Pending() []*core.Transaction {
+func (p *TxPool) Pending() []*types2.Transaction {
 	return p.pending.txx.Data
 }
 
@@ -54,35 +53,35 @@ func (p *TxPool) PendingCount() int {
 }
 
 type TxSortedMap struct {
-	lock sync.RWMutex
-	lookup map[types.Hash]*core.Transaction
-	txx *types.List[*core.Transaction]
+	lock   sync.RWMutex
+	lookup map[common.Hash]*types2.Transaction
+	txx    *common.List[*types2.Transaction]
 }
 
 func NewTxSortedMap() *TxSortedMap {
-	return &TxSortedMap {
-		lookup: make(map[types.Hash]*core.Transaction),
-		txx: types.NewList[*core.Transaction](),
+	return &TxSortedMap{
+		lookup: make(map[common.Hash]*types2.Transaction),
+		txx:    common.NewList[*types2.Transaction](),
 	}
 }
 
-func (t *TxSortedMap) First() *core.Transaction {
+func (t *TxSortedMap) First() *types2.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
 	first := t.txx.Get(0)
-	return t.lookup[first.Hash(core.TxHasher{})]
+	return t.lookup[first.Hash(types2.TxHasher{})]
 }
 
-func (t *TxSortedMap) Get(h types.Hash) *core.Transaction {
+func (t *TxSortedMap) Get(h common.Hash) *types2.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
 	return t.lookup[h]
 }
 
-func (t *TxSortedMap) Add(tx *core.Transaction) {
-	hash := tx.Hash(core.TxHasher{})
+func (t *TxSortedMap) Add(tx *types2.Transaction) {
+	hash := tx.Hash(types2.TxHasher{})
 
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -93,7 +92,7 @@ func (t *TxSortedMap) Add(tx *core.Transaction) {
 	}
 }
 
-func (t *TxSortedMap) Remove(h types.Hash) {
+func (t *TxSortedMap) Remove(h common.Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -108,7 +107,7 @@ func (t *TxSortedMap) Count() int {
 	return len(t.lookup)
 }
 
-func (t *TxSortedMap) Contains(h types.Hash) bool {
+func (t *TxSortedMap) Contains(h common.Hash) bool {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -120,6 +119,6 @@ func (t *TxSortedMap) Clear() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.lookup = make(map[types.Hash]*core.Transaction)
+	t.lookup = make(map[common.Hash]*types2.Transaction)
 	t.txx.Clear()
 }

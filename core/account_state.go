@@ -3,9 +3,8 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
 	"sync"
-
-	"github.com/barreleye-labs/barreleye/types"
 )
 
 var (
@@ -14,7 +13,7 @@ var (
 )
 
 type Account struct {
-	Address types.Address
+	Address common.Address
 	Balance uint64
 }
 
@@ -24,16 +23,16 @@ func (a *Account) String() string {
 
 type AccountState struct {
 	mu       sync.RWMutex
-	accounts map[types.Address]*Account
+	accounts map[common.Address]*Account
 }
 
 func NewAccountState() *AccountState {
 	return &AccountState{
-		accounts: make(map[types.Address]*Account),
+		accounts: make(map[common.Address]*Account),
 	}
 }
 
-func (s *AccountState) CreateAccount(address types.Address) *Account {
+func (s *AccountState) CreateAccount(address common.Address) *Account {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -42,14 +41,14 @@ func (s *AccountState) CreateAccount(address types.Address) *Account {
 	return acc
 }
 
-func (s *AccountState) GetAccount(address types.Address) (*Account, error) {
+func (s *AccountState) GetAccount(address common.Address) (*Account, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	return s.getAccountWithoutLock(address)
 }
 
-func (s *AccountState) getAccountWithoutLock(address types.Address) (*Account, error) {
+func (s *AccountState) getAccountWithoutLock(address common.Address) (*Account, error) {
 	account, ok := s.accounts[address]
 	if !ok {
 		return nil, ErrAccountNotFound
@@ -58,7 +57,7 @@ func (s *AccountState) getAccountWithoutLock(address types.Address) (*Account, e
 	return account, nil
 }
 
-func (s *AccountState) GetBalance(address types.Address) (uint64, error) {
+func (s *AccountState) GetBalance(address common.Address) (uint64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -70,7 +69,7 @@ func (s *AccountState) GetBalance(address types.Address) (uint64, error) {
 	return account.Balance, nil
 }
 
-func (s *AccountState) Transfer(from, to types.Address, amount uint64) error {
+func (s *AccountState) Transfer(from, to common.Address, amount uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

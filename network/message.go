@@ -1,6 +1,8 @@
 package network
 
-import "github.com/barreleye-labs/barreleye/core"
+import (
+	"github.com/barreleye-labs/barreleye/core/types"
+)
 
 type GetBlocksMessage struct {
 	From uint32
@@ -9,7 +11,7 @@ type GetBlocksMessage struct {
 }
 
 type BlocksMessage struct {
-	Blocks []*core.Block
+	Blocks []*types.Block
 }
 
 type GetStatusMessage struct {

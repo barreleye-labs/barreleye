@@ -6,10 +6,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/barreleye-labs/barreleye/common"
 	"io"
 	"math/big"
-
-	"github.com/barreleye-labs/barreleye/types"
 )
 
 type PrivateKey struct {
@@ -54,10 +53,10 @@ func (k PublicKey) String() string {
 	return hex.EncodeToString(k)
 }
 
-func (k PublicKey) Address() types.Address {
+func (k PublicKey) Address() common.Address {
 	h := sha256.Sum256(k)
 
-	return types.NewAddressFromBytes(h[len(h)-20:])
+	return common.NewAddressFromBytes(h[len(h)-20:])
 }
 
 type Signature struct {

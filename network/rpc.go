@@ -5,10 +5,10 @@ import (
 	"crypto/elliptic"
 	"encoding/gob"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/core/types"
 	"io"
 	"net"
 
-	"github.com/barreleye-labs/barreleye/core"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,7 +20,7 @@ const (
 	MessageTypeGetBlocks MessageType = 0x3
 	MessageTypeStatus    MessageType = 0x4
 	MessageTypeGetStatus MessageType = 0x5
-	MessageTypeBlocks 	 MessageType = 0x6
+	MessageTypeBlocks    MessageType = 0x6
 )
 
 type RPC struct {
@@ -68,8 +68,8 @@ func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
 
 	switch msg.Header {
 	case MessageTypeTx:
-		tx := new(core.Transaction)
-		if err := tx.Decode(core.NewGobTxDecoder(bytes.NewReader(msg.Data))); err != nil {
+		tx := new(types.Transaction)
+		if err := tx.Decode(types.NewGobTxDecoder(bytes.NewReader(msg.Data))); err != nil {
 			return nil, err
 		}
 
@@ -79,8 +79,8 @@ func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
 		}, nil
 
 	case MessageTypeBlock:
-		block := new(core.Block)
-		if err := block.Decode(core.NewGobBlockDecoder(bytes.NewReader(msg.Data))); err != nil {
+		block := new(types.Block)
+		if err := block.Decode(types.NewGobBlockDecoder(bytes.NewReader(msg.Data))); err != nil {
 			return nil, err
 		}
 
@@ -105,7 +105,7 @@ func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
 			From: rpc.From,
 			Data: statusMessage,
 		}, nil
-	
+
 	case MessageTypeGetBlocks:
 		getBlocks := new(GetBlocksMessage)
 		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(getBlocks); err != nil {
