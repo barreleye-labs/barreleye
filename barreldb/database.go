@@ -14,6 +14,10 @@ func DefaultDataDir() string {
 	if home != "" {
 		switch runtime.GOOS {
 		case "darwin":
+			//s1 := rand.NewSource(time.Now().UnixNano())
+			//r1 := rand.New(s1)
+			//fmt.Println("fffF: ", "Barreleye"+strconv.Itoa(r1.Intn(1000)))
+			//return filepath.Join(home, "Library", "Barreleye"+strconv.Itoa(r1.Intn(1000)))
 			return filepath.Join(home, "Library", "Barreleye")
 		case "windows":
 			// We used to put everything in %HOME%\AppData\Roaming, but this caused
@@ -73,10 +77,15 @@ func New() (*BarrelDatabase, error) {
 	return &BarrelDatabase{db: db}, nil
 }
 
-func (barrelDb *BarrelDatabase) Get(key []byte) ([]byte, error) {
-	return barrelDb.db.Get(key, nil)
+func (barrelDB *BarrelDatabase) Close() error {
+	err := barrelDB.db.Close()
+	return err
 }
 
-func (barrelDb *BarrelDatabase) Put(key []byte, value []byte) error {
-	return barrelDb.db.Put(key, value, nil)
+func (barrelDB *BarrelDatabase) Get(key []byte) ([]byte, error) {
+	return barrelDB.db.Get(key, nil)
+}
+
+func (barrelDB *BarrelDatabase) Put(key []byte, value []byte) error {
+	return barrelDB.db.Put(key, value, nil)
 }

@@ -2,9 +2,8 @@ package core
 
 import (
 	"fmt"
-	"github.com/barreleye-labs/barreleye/barreldb"
 	"github.com/barreleye-labs/barreleye/common"
-	types2 "github.com/barreleye-labs/barreleye/core/types"
+	"github.com/barreleye-labs/barreleye/core/types"
 	"sync"
 
 	"github.com/barreleye-labs/barreleye/crypto"
@@ -16,26 +15,28 @@ type Blockchain struct {
 	store  Storage
 	// TODO: double check this!
 	lock       sync.RWMutex
-	headers    []*types2.Header
-	blocks     []*types2.Block
-	txStore    map[common.Hash]*types2.Transaction
-	blockStore map[common.Hash]*types2.Block
+	headers    []*types.Header
+	blocks     []*types.Block
+	txStore    map[common.Hash]*types.Transaction
+	blockStore map[common.Hash]*types.Block
 
 	accountState *AccountState
 
 	stateLock       sync.RWMutex
-	collectionState map[common.Hash]*types2.CollectionTx
-	mintState       map[common.Hash]*types2.MintTx
+	collectionState map[common.Hash]*types.CollectionTx
+	mintState       map[common.Hash]*types.MintTx
 	validator       Validator
 	// TODO: make this an interface.
 	contractState *State
 }
 
-func NewBlockchain(l log.Logger, genesis *types2.Block) (*Blockchain, error) {
-	db, _ := barreldb.New()
-	_ = db.Put([]byte("김"), []byte("영민"))
-	data, _ := db.Get([]byte("김"))
-	fmt.Println("valueaaaa: ", string(data))
+func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
+	//db, _ := barreldb.New()
+	//_ = db.Put([]byte("김"), []byte("영민"))
+	//data, _ := db.Get([]byte("김"))
+	//fmt.Println("valueaaaa: ", string(data))
+	//_ = db.Close()
+	//db = nil
 	// We should create all states inside the scope of the newblockchain.
 
 	// TODO: read this from disk later on
@@ -46,14 +47,14 @@ func NewBlockchain(l log.Logger, genesis *types2.Block) (*Blockchain, error) {
 
 	bc := &Blockchain{
 		contractState:   NewState(),
-		headers:         []*types2.Header{},
+		headers:         []*types.Header{},
 		store:           NewMemorystore(),
 		logger:          l,
 		accountState:    accountState,
-		collectionState: make(map[common.Hash]*types2.CollectionTx),
-		mintState:       make(map[common.Hash]*types2.MintTx),
-		blockStore:      make(map[common.Hash]*types2.Block),
-		txStore:         make(map[common.Hash]*types2.Transaction),
+		collectionState: make(map[common.Hash]*types.CollectionTx),
+		mintState:       make(map[common.Hash]*types.MintTx),
+		blockStore:      make(map[common.Hash]*types.Block),
+		txStore:         make(map[common.Hash]*types.Transaction),
 	}
 	bc.validator = NewBlockValidator(bc)
 	err := bc.addBlockWithoutValidation(genesis)
@@ -65,7 +66,7 @@ func (bc *Blockchain) SetValidator(v Validator) {
 	bc.validator = v
 }
 
-func (bc *Blockchain) AddBlock(b *types2.Block) error {
+func (bc *Blockchain) AddBlock(b *types.Block) error {
 	if err := bc.validator.ValidateBlock(b); err != nil {
 		return err
 	}
@@ -73,7 +74,7 @@ func (bc *Blockchain) AddBlock(b *types2.Block) error {
 	return bc.addBlockWithoutValidation(b)
 }
 
-func (bc *Blockchain) handleNativeTransfer(tx *types2.Transaction) error {
+func (bc *Blockchain) handleNativeTransfer(tx *types.Transaction) error {
 	bc.logger.Log(
 		"msg", "handle native token transfer",
 		"from", tx.From,
@@ -83,14 +84,14 @@ func (bc *Blockchain) handleNativeTransfer(tx *types2.Transaction) error {
 	return bc.accountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
 }
 
-func (bc *Blockchain) handleNativeNFT(tx *types2.Transaction) error {
-	hash := tx.Hash(types2.TxHasher{})
+func (bc *Blockchain) handleNativeNFT(tx *types.Transaction) error {
+	hash := tx.Hash(types.TxHasher{})
 
 	switch t := tx.TxInner.(type) {
-	case types2.CollectionTx:
+	case types.CollectionTx:
 		bc.collectionState[hash] = &t
 		bc.logger.Log("msg", "created new NFT collection", "hash", hash)
-	case types2.MintTx:
+	case types.MintTx:
 		_, ok := bc.collectionState[t.Collection]
 		if !ok {
 			return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
@@ -105,7 +106,7 @@ func (bc *Blockchain) handleNativeNFT(tx *types2.Transaction) error {
 	return nil
 }
 
-func (bc *Blockchain) GetBlockByHash(hash common.Hash) (*types2.Block, error) {
+func (bc *Blockchain) GetBlockByHash(hash common.Hash) (*types.Block, error) {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
@@ -117,7 +118,7 @@ func (bc *Blockchain) GetBlockByHash(hash common.Hash) (*types2.Block, error) {
 	return block, nil
 }
 
-func (bc *Blockchain) GetBlock(height uint32) (*types2.Block, error) {
+func (bc *Blockchain) GetBlock(height uint32) (*types.Block, error) {
 	if height > bc.Height() {
 		return nil, fmt.Errorf("given height (%d) too high", height)
 	}
@@ -128,7 +129,7 @@ func (bc *Blockchain) GetBlock(height uint32) (*types2.Block, error) {
 	return bc.blocks[height], nil
 }
 
-func (bc *Blockchain) GetHeader(height uint32) (*types2.Header, error) {
+func (bc *Blockchain) GetHeader(height uint32) (*types.Header, error) {
 	if height > bc.Height() {
 		return nil, fmt.Errorf("given height (%d) too high", height)
 	}
@@ -139,7 +140,7 @@ func (bc *Blockchain) GetHeader(height uint32) (*types2.Header, error) {
 	return bc.headers[height], nil
 }
 
-func (bc *Blockchain) GetTxByHash(hash common.Hash) (*types2.Transaction, error) {
+func (bc *Blockchain) GetTxByHash(hash common.Hash) (*types.Transaction, error) {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
@@ -164,10 +165,10 @@ func (bc *Blockchain) Height() uint32 {
 	return uint32(len(bc.headers) - 1)
 }
 
-func (bc *Blockchain) handleTransaction(tx *types2.Transaction) error {
+func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 	// If we have data inside execute that data on the VM.
 	if len(tx.Data) > 0 {
-		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.Hash(&types2.TxHasher{}))
+		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.Hash(&types.TxHasher{}))
 
 		vm := NewVM(tx.Data, bc.contractState)
 		if err := vm.Run(); err != nil {
@@ -193,7 +194,7 @@ func (bc *Blockchain) handleTransaction(tx *types2.Transaction) error {
 	return nil
 }
 
-func (bc *Blockchain) addBlockWithoutValidation(b *types2.Block) error {
+func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	bc.stateLock.Lock()
 	for i := 0; i < len(b.Transactions); i++ {
 		if err := bc.handleTransaction(b.Transactions[i]); err != nil {
@@ -214,16 +215,16 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types2.Block) error {
 	bc.lock.Lock()
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
-	bc.blockStore[b.Hash(types2.BlockHasher{})] = b
+	bc.blockStore[b.Hash(types.BlockHasher{})] = b
 
 	for _, tx := range b.Transactions {
-		bc.txStore[tx.Hash(types2.TxHasher{})] = tx
+		bc.txStore[tx.Hash(types.TxHasher{})] = tx
 	}
 	bc.lock.Unlock()
 
 	bc.logger.Log(
 		"msg", "🔗 add new block",
-		"hash", b.Hash(types2.BlockHasher{}),
+		"hash", b.Hash(types.BlockHasher{}),
 		"height", b.Height,
 		"transactions", len(b.Transactions),
 	)
