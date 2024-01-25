@@ -1,40 +1,49 @@
 package barreldb
 
 import (
+	"flag"
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"runtime"
 )
 
 func DefaultDataDir() string {
-	// Try to place the data folder in the user's home dir
-	home := homeDir()
-	if home != "" {
-		switch runtime.GOOS {
-		case "darwin":
-			//s1 := rand.NewSource(time.Now().UnixNano())
-			//r1 := rand.New(s1)
-			//fmt.Println("fffF: ", "Barreleye"+strconv.Itoa(r1.Intn(1000)))
-			//return filepath.Join(home, "Library", "Barreleye"+strconv.Itoa(r1.Intn(1000)))
-			return filepath.Join(home, "Library", "Barreleye")
-		case "windows":
-			// We used to put everything in %HOME%\AppData\Roaming, but this caused
-			// problems with non-typical setups. If this fallback location exists and
-			// is non-empty, use it, otherwise DTRT and check %LOCALAPPDATA%.
-			fallback := filepath.Join(home, "AppData", "Roaming", "Barreleye")
-			appdata := windowsAppData()
-			if appdata == "" || isNonEmptyDir(fallback) {
-				return fallback
-			}
-			return filepath.Join(appdata, "Barreleye")
-		default:
-			return filepath.Join(home, ".barreleye")
-		}
-	}
-	// As we cannot guess a stable location, return empty and handle later
-	return ""
+	//var nodeName string = ""
+	//flag.StringVar(&nodeName, "nodeName", "", "Node name")
+	//flag.Parse()
+	//fmt.Println("nonoaaa: ", nodeName)
+
+	nodeName := flag.Lookup("nodeName").Value.(flag.Getter).Get().(string)
+
+	_, filename, _, _ := runtime.Caller(0)
+	root := path.Join(path.Dir(filename), "..")
+	return filepath.Join(root, nodeName)
+
+	//// Try to place the data folder in the user's home dir
+	//home := homeDir()
+	//if home != "" {
+	//	switch runtime.GOOS {
+	//	case "darwin":
+	//		return filepath.Join(home, "Library", "Barreleye")
+	//	case "windows":
+	//		// We used to put everything in %HOME%\AppData\Roaming, but this caused
+	//		// problems with non-typical setups. If this fallback location exists and
+	//		// is non-empty, use it, otherwise DTRT and check %LOCALAPPDATA%.
+	//		fallback := filepath.Join(home, "AppData", "Roaming", "Barreleye")
+	//		appdata := windowsAppData()
+	//		if appdata == "" || isNonEmptyDir(fallback) {
+	//			return fallback
+	//		}
+	//		return filepath.Join(appdata, "Barreleye")
+	//	default:
+	//		return filepath.Join(home, ".barreleye")
+	//	}
+	//}
+	//// As we cannot guess a stable location, return empty and handle later
+	//return ""
 }
 
 func windowsAppData() string {
