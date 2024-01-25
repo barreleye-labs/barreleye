@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
-	types2 "github.com/barreleye-labs/barreleye/core/types"
+	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
 	"net/http"
 	"time"
@@ -34,7 +34,6 @@ func main() {
 	// }
 
 	if nodeName == "node1" {
-		fmt.Println("aaaa")
 		validatorPrivKey := crypto.GeneratePrivateKey()
 		node := makeServer("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
 		node.Start()
@@ -89,7 +88,7 @@ func main() {
 func sendTransaction(privKey crypto.PrivateKey) error {
 	toPrivKey := crypto.GeneratePrivateKey()
 
-	tx := types2.NewTransaction(nil)
+	tx := types.NewTransaction(nil)
 	tx.To = toPrivKey.PublicKey()
 	tx.Value = 666
 
@@ -98,7 +97,7 @@ func sendTransaction(privKey crypto.PrivateKey) error {
 	}
 
 	buf := &bytes.Buffer{}
-	if err := tx.Encode(types2.NewGobTxEncoder(buf)); err != nil {
+	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
 		panic(err)
 	}
 
@@ -131,15 +130,15 @@ func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []strin
 }
 
 func createCollectionTx(privKey crypto.PrivateKey) common.Hash {
-	tx := types2.NewTransaction(nil)
-	tx.TxInner = types2.CollectionTx{
+	tx := types.NewTransaction(nil)
+	tx.TxInner = types.CollectionTx{
 		Fee:      200,
 		MetaData: []byte("chicken and egg collection!"),
 	}
 	tx.Sign(privKey)
 
 	buf := &bytes.Buffer{}
-	if err := tx.Encode(types2.NewGobTxEncoder(buf)); err != nil {
+	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
 		panic(err)
 	}
 
@@ -154,7 +153,7 @@ func createCollectionTx(privKey crypto.PrivateKey) common.Hash {
 		panic(err)
 	}
 
-	return tx.Hash(types2.TxHasher{})
+	return tx.Hash(types.TxHasher{})
 }
 
 func nftMinter(privKey crypto.PrivateKey, collection common.Hash) {
@@ -170,8 +169,8 @@ func nftMinter(privKey crypto.PrivateKey, collection common.Hash) {
 		panic(err)
 	}
 
-	tx := types2.NewTransaction(nil)
-	tx.TxInner = types2.MintTx{
+	tx := types.NewTransaction(nil)
+	tx.TxInner = types.MintTx{
 		Fee:             200,
 		NFT:             util.RandomHash(),
 		MetaData:        metaBuf.Bytes(),
@@ -181,7 +180,7 @@ func nftMinter(privKey crypto.PrivateKey, collection common.Hash) {
 	tx.Sign(privKey)
 
 	buf := &bytes.Buffer{}
-	if err := tx.Encode(types2.NewGobTxEncoder(buf)); err != nil {
+	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
 		panic(err)
 	}
 
