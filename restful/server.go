@@ -1,4 +1,4 @@
-package api
+package restful
 
 import (
 	"encoding/gob"

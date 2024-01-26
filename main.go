@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/common/util"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/network"
-	"github.com/barreleye-labs/barreleye/util"
 )
 
 func main() {

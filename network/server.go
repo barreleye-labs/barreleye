@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/barreleye-labs/barreleye/api"
 	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/crypto"
+	"github.com/barreleye-labs/barreleye/restful"
 	"github.com/go-kit/log"
 )
 
@@ -68,11 +68,11 @@ func NewServer(opts ServerOpts) (*Server, error) {
 	txChan := make(chan *types2.Transaction)
 
 	if len(opts.APIListenAddr) > 0 {
-		apiServerCfg := api.ServerConfig{
+		apiServerCfg := restful.ServerConfig{
 			Logger:     opts.Logger,
 			ListenAddr: opts.APIListenAddr,
 		}
-		apiServer := api.NewServer(apiServerCfg, chain, txChan)
+		apiServer := restful.NewServer(apiServerCfg, chain, txChan)
 		go apiServer.Start()
 
 		opts.Logger.Log("msg", "JSON API server running", "port", opts.APIListenAddr)

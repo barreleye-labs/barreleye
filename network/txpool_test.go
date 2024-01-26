@@ -1,10 +1,10 @@
 package network
 
 import (
+	"github.com/barreleye-labs/barreleye/common/util"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"testing"
 
-	"github.com/barreleye-labs/barreleye/util"
 	"github.com/stretchr/testify/assert"
 )
 
