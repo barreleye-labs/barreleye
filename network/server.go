@@ -342,7 +342,7 @@ func (s *Server) processBlock(b *types2.Block) error {
 }
 
 func (s *Server) processTransaction(tx *types2.Transaction) error {
-	hash := tx.Hash(types2.TxHasher{})
+	hash := tx.GetHash(types2.TxHasher{})
 
 	if s.mempool.Contains(hash) {
 		return nil

@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sync"
 )
 
 func DefaultDataDir() string {
@@ -78,10 +79,12 @@ func homeDir() string {
 }
 
 type BarrelDatabase struct {
-	db *leveldb.DB
+	db   *leveldb.DB
+	lock sync.RWMutex
 }
 
 func New() (*BarrelDatabase, error) {
+
 	db, _ := leveldb.OpenFile(DefaultDataDir(), nil)
 	return &BarrelDatabase{db: db}, nil
 }
@@ -92,7 +95,12 @@ func (barrelDB *BarrelDatabase) Close() error {
 }
 
 func (barrelDB *BarrelDatabase) Get(key []byte) ([]byte, error) {
+
 	return barrelDB.db.Get(key, nil)
+}
+
+func (barrelDB *BarrelDatabase) Has(key []byte) (bool, error) {
+	return barrelDB.db.Has(key, nil)
 }
 
 func (barrelDB *BarrelDatabase) Put(key []byte, value []byte) error {

@@ -153,7 +153,7 @@ func createCollectionTx(privKey crypto.PrivateKey) common.Hash {
 		panic(err)
 	}
 
-	return tx.Hash(types.TxHasher{})
+	return tx.GetHash(types.TxHasher{})
 }
 
 func nftMinter(privKey crypto.PrivateKey, collection common.Hash) {

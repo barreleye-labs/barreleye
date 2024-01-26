@@ -3,19 +3,17 @@ package core
 import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
-	types2 "github.com/barreleye-labs/barreleye/core/types"
-	"testing"
-
+	"github.com/barreleye-labs/barreleye/core/types"
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/go-kit/log"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestSendNativeTransferTamper(t *testing.T) {
 	bc := newBlockchainWithGenesis(t)
 	signer := crypto.GeneratePrivateKey()
-
-	block := types2.randomBlock(t, uint32(1), getPrevBlockHash(t, bc, uint32(1)))
+	block := randomBlock(t, uint32(1), getPrevBlockHash(t, bc, uint32(1)))
 	assert.Nil(t, block.Sign(signer))
 
 	privKeyBob := crypto.GeneratePrivateKey()
@@ -25,12 +23,12 @@ func TestSendNativeTransferTamper(t *testing.T) {
 	accountBob := bc.accountState.CreateAccount(privKeyBob.PublicKey().Address())
 	accountBob.Balance = amount
 
-	tx := types2.NewTransaction([]byte{})
+	tx := types.NewTransaction([]byte{})
 	tx.From = privKeyBob.PublicKey()
 	tx.To = privKeyAlice.PublicKey()
 	tx.Value = amount
 	tx.Sign(privKeyBob)
-	tx.hash = common.Hash{}
+	tx.Hash = common.Hash{}
 
 	hackerPrivKey := crypto.GeneratePrivateKey()
 	tx.To = hackerPrivKey.PublicKey()
@@ -46,7 +44,7 @@ func TestSendNativeTransferInsuffientBalance(t *testing.T) {
 	bc := newBlockchainWithGenesis(t)
 	signer := crypto.GeneratePrivateKey()
 
-	block := types2.randomBlock(t, uint32(1), getPrevBlockHash(t, bc, uint32(1)))
+	block := randomBlock(t, uint32(1), getPrevBlockHash(t, bc, uint32(1)))
 	assert.Nil(t, block.Sign(signer))
 
 	privKeyBob := crypto.GeneratePrivateKey()
@@ -56,12 +54,12 @@ func TestSendNativeTransferInsuffientBalance(t *testing.T) {
 	accountBob := bc.accountState.CreateAccount(privKeyBob.PublicKey().Address())
 	accountBob.Balance = uint64(99)
 
-	tx := types2.NewTransaction([]byte{})
+	tx := types.NewTransaction([]byte{})
 	tx.From = privKeyBob.PublicKey()
 	tx.To = privKeyAlice.PublicKey()
 	tx.Value = amount
 	tx.Sign(privKeyBob)
-	tx.hash = common.Hash{}
+	tx.Hash = common.Hash{}
 
 	fmt.Printf("alice => %s\n", privKeyAlice.PublicKey().Address())
 	fmt.Printf("bob => %s\n", privKeyBob.PublicKey().Address())
@@ -72,7 +70,7 @@ func TestSendNativeTransferInsuffientBalance(t *testing.T) {
 	_, err := bc.accountState.GetAccount(privKeyAlice.PublicKey().Address())
 	assert.NotNil(t, err)
 
-	hash := tx.Hash(types2.TxHasher{})
+	hash := tx.GetHash(types.TxHasher{})
 	_, err = bc.GetTxByHash(hash)
 	assert.NotNil(t, err)
 }
@@ -82,7 +80,7 @@ func TestSendNativeTransferSuccess(t *testing.T) {
 
 	signer := crypto.GeneratePrivateKey()
 
-	block := types2.randomBlock(t, uint32(1), getPrevBlockHash(t, bc, uint32(1)))
+	block := randomBlock(t, uint32(1), getPrevBlockHash(t, bc, uint32(1)))
 	assert.Nil(t, block.Sign(signer))
 
 	privKeyBob := crypto.GeneratePrivateKey()
@@ -92,7 +90,7 @@ func TestSendNativeTransferSuccess(t *testing.T) {
 	accountBob := bc.accountState.CreateAccount(privKeyBob.PublicKey().Address())
 	accountBob.Balance = amount
 
-	tx := types2.NewTransaction([]byte{})
+	tx := types.NewTransaction([]byte{})
 	tx.From = privKeyBob.PublicKey()
 	tx.To = privKeyAlice.PublicKey()
 	tx.Value = amount
@@ -111,13 +109,13 @@ func TestAddBlock(t *testing.T) {
 
 	lenBlocks := 1000
 	for i := 0; i < lenBlocks; i++ {
-		block := types2.randomBlock(t, uint32(i+1), getPrevBlockHash(t, bc, uint32(i+1)))
+		block := randomBlock(t, uint32(i+1), getPrevBlockHash(t, bc, uint32(i+1)))
 		assert.Nil(t, bc.AddBlock(block))
 	}
 
 	assert.Equal(t, bc.Height(), uint32(lenBlocks))
 	assert.Equal(t, len(bc.headers), lenBlocks+1)
-	assert.NotNil(t, bc.AddBlock(types2.randomBlock(t, 89, common.Hash{})))
+	assert.NotNil(t, bc.AddBlock(randomBlock(t, 89, common.Hash{})))
 }
 
 func TestNewBlockchain(t *testing.T) {
@@ -138,7 +136,7 @@ func TestGetBlock(t *testing.T) {
 	lenBlocks := 100
 
 	for i := 0; i < lenBlocks; i++ {
-		block := types2.randomBlock(t, uint32(i+1), getPrevBlockHash(t, bc, uint32(i+1)))
+		block := randomBlock(t, uint32(i+1), getPrevBlockHash(t, bc, uint32(i+1)))
 		assert.Nil(t, bc.AddBlock(block))
 
 		fetchedBlock, err := bc.GetBlock(block.Height)
@@ -152,7 +150,7 @@ func TestGetHeader(t *testing.T) {
 	lenBlocks := 1000
 
 	for i := 0; i < lenBlocks; i++ {
-		block := types2.randomBlock(t, uint32(i+1), getPrevBlockHash(t, bc, uint32(i+1)))
+		block := randomBlock(t, uint32(i+1), getPrevBlockHash(t, bc, uint32(i+1)))
 		assert.Nil(t, bc.AddBlock(block))
 		header, err := bc.GetHeader(block.Height)
 		assert.Nil(t, err)
@@ -162,13 +160,12 @@ func TestGetHeader(t *testing.T) {
 
 func TestAddBlockToHigh(t *testing.T) {
 	bc := newBlockchainWithGenesis(t)
-
-	assert.Nil(t, bc.AddBlock(types2.randomBlock(t, 1, getPrevBlockHash(t, bc, uint32(1)))))
-	assert.NotNil(t, bc.AddBlock(types2.randomBlock(t, 3, common.Hash{})))
+	assert.Nil(t, bc.AddBlock(randomBlock(t, 1, getPrevBlockHash(t, bc, uint32(1)))))
+	assert.NotNil(t, bc.AddBlock(randomBlock(t, 3, common.Hash{})))
 }
 
 func newBlockchainWithGenesis(t *testing.T) *Blockchain {
-	bc, err := NewBlockchain(log.NewNopLogger(), types2.randomBlock(t, 0, common.Hash{}))
+	bc, err := NewBlockchain(log.NewNopLogger(), randomBlock(t, 0, common.Hash{}))
 	assert.Nil(t, err)
 
 	return bc
@@ -177,5 +174,5 @@ func newBlockchainWithGenesis(t *testing.T) *Blockchain {
 func getPrevBlockHash(t *testing.T, bc *Blockchain, height uint32) common.Hash {
 	prevHeader, err := bc.GetHeader(height - 1)
 	assert.Nil(t, err)
-	return types2.BlockHasher{}.Hash(prevHeader)
+	return types.BlockHasher{}.Hash(prevHeader)
 }

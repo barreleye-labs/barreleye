@@ -127,7 +127,7 @@ func intoJSONBlock(block *types2.Block) Block {
 	}
 
 	for i := 0; i < int(txResponse.TxCount); i++ {
-		txResponse.Hashes[i] = block.Transactions[i].Hash(types2.TxHasher{}).String()
+		txResponse.Hashes[i] = block.Transactions[i].GetHash(types2.TxHasher{}).String()
 	}
 
 	return Block{
