@@ -1,10 +1,10 @@
 package network
 
 import (
+	"github.com/barreleye-labs/barreleye/common/util"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"testing"
 
-	"github.com/barreleye-labs/barreleye/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func TestTxMaxLength(t *testing.T) {
 	tx := util.NewRandomTransaction(100)
 	p.Add(tx)
 	assert.Equal(t, 1, p.all.Count())
-	assert.True(t, p.Contains(tx.Hash(types.TxHasher{})))
+	assert.True(t, p.Contains(tx.GetHash(types.TxHasher{})))
 }
 
 func TestTxPoolAdd(t *testing.T) {
@@ -57,7 +57,7 @@ func TestTxPoolMaxLength(t *testing.T) {
 	assert.Equal(t, len(txx), maxLen)
 
 	for _, tx := range txx {
-		assert.True(t, p.Contains(tx.Hash(types.TxHasher{})))
+		assert.True(t, p.Contains(tx.GetHash(types.TxHasher{})))
 	}
 }
 
@@ -83,9 +83,9 @@ func TestTxSortedMapAdd(t *testing.T) {
 		m.Add(tx)
 
 		assert.Equal(t, m.Count(), i+1)
-		assert.True(t, m.Contains(tx.Hash(types.TxHasher{})))
+		assert.True(t, m.Contains(tx.GetHash(types.TxHasher{})))
 		assert.Equal(t, len(m.lookup), m.txx.Len())
-		assert.Equal(t, m.Get(tx.Hash(types.TxHasher{})), tx)
+		assert.Equal(t, m.Get(tx.GetHash(types.TxHasher{})), tx)
 	}
 
 	m.Clear()
@@ -101,7 +101,7 @@ func TestTxSortedMapRemove(t *testing.T) {
 	m.Add(tx)
 	assert.Equal(t, m.Count(), 1)
 
-	m.Remove(tx.Hash(types.TxHasher{}))
+	m.Remove(tx.GetHash(types.TxHasher{}))
 	assert.Equal(t, m.Count(), 0)
-	assert.False(t, m.Contains(tx.Hash(types.TxHasher{})))
+	assert.False(t, m.Contains(tx.GetHash(types.TxHasher{})))
 }

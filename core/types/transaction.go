@@ -42,7 +42,7 @@ type Transaction struct {
 	Nonce     int64
 
 	// cached version of the tx data hash
-	hash common.Hash
+	Hash common.Hash
 }
 
 func NewTransaction(data []byte) *Transaction {
@@ -52,15 +52,15 @@ func NewTransaction(data []byte) *Transaction {
 	}
 }
 
-func (tx *Transaction) Hash(hasher Hasher[*Transaction]) common.Hash {
-	if tx.hash.IsZero() {
-		tx.hash = hasher.Hash(tx)
+func (tx *Transaction) GetHash(hasher Hasher[*Transaction]) common.Hash {
+	if tx.Hash.IsZero() {
+		tx.Hash = hasher.Hash(tx)
 	}
-	return tx.hash
+	return tx.Hash
 }
 
 func (tx *Transaction) Sign(privKey crypto.PrivateKey) error {
-	hash := tx.Hash(TxHasher{})
+	hash := tx.GetHash(TxHasher{})
 	sig, err := privKey.Sign(hash.ToSlice())
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (tx *Transaction) Verify() error {
 		return fmt.Errorf("transaction has no signature")
 	}
 
-	hash := tx.Hash(TxHasher{})
+	hash := tx.GetHash(TxHasher{})
 	if !tx.Signature.Verify(tx.From, hash.ToSlice()) {
 		return fmt.Errorf("invalid transaction signature")
 	}

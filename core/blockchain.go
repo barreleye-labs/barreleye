@@ -15,36 +15,42 @@ type Blockchain struct {
 	logger log.Logger
 	store  Storage
 	// TODO: double check this!
-	lock       sync.RWMutex
-	headers    []*types.Header
-	blocks     []*types.Block
-	txStore    map[common.Hash]*types.Transaction
-	blockStore map[common.Hash]*types.Block
-
-	accountState *AccountState
-
+	lock            sync.RWMutex
+	headers         []*types.Header
+	blocks          []*types.Block
+	txStore         map[common.Hash]*types.Transaction
+	blockStore      map[common.Hash]*types.Block
+	accountState    *AccountState
 	stateLock       sync.RWMutex
 	collectionState map[common.Hash]*types.CollectionTx
 	mintState       map[common.Hash]*types.MintTx
 	validator       Validator
 	// TODO: make this an interface.
 	contractState *State
+	db            *barreldb.BarrelDatabase
 }
 
 func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
-	db, _ := barreldb.New()
-	_ = db.Put([]byte("김"), []byte("영민"))
-	data, _ := db.Get([]byte("김"))
-	fmt.Println("valueaaaa: ", string(data))
-	_ = db.Close()
-	// We should create all states inside the scope of the newblockchain.
+	//db1, _ := barreldb.New()
+	//_ = db1.Put([]byte("김"), []byte("영민"))
+	//data, _ := db1.Get([]byte("김"))
+	//fmt.Println("valueaaaa: ", string(data))
+	//existed, _ := db1.Has([]byte("김"))
+	//fmt.Println("exisis: ", existed)
+	//existed1, _ := db1.Has([]byte("이"))
+	//fmt.Println("exisis1: ", existed1)
+	//_ = db1.Close()
 
+	// We should create all states inside the scope of the newblockchain.
 	// TODO: read this from disk later on
 	accountState := NewAccountState()
 
 	coinbase := crypto.PublicKey{}
 	accountState.CreateAccount(coinbase.Address())
 
+	fmt.Println("1111111")
+	db, _ := barreldb.New()
+	fmt.Println("2222222")
 	bc := &Blockchain{
 		contractState:   NewState(),
 		headers:         []*types.Header{},
@@ -55,6 +61,7 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 		mintState:       make(map[common.Hash]*types.MintTx),
 		blockStore:      make(map[common.Hash]*types.Block),
 		txStore:         make(map[common.Hash]*types.Transaction),
+		db:              db,
 	}
 	bc.validator = NewBlockValidator(bc)
 	err := bc.addBlockWithoutValidation(genesis)
@@ -85,7 +92,7 @@ func (bc *Blockchain) handleNativeTransfer(tx *types.Transaction) error {
 }
 
 func (bc *Blockchain) handleNativeNFT(tx *types.Transaction) error {
-	hash := tx.Hash(types.TxHasher{})
+	hash := tx.GetHash(types.TxHasher{})
 
 	switch t := tx.TxInner.(type) {
 	case types.CollectionTx:
@@ -168,7 +175,7 @@ func (bc *Blockchain) Height() uint32 {
 func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 	// If we have data inside execute that data on the VM.
 	if len(tx.Data) > 0 {
-		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.Hash(&types.TxHasher{}))
+		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash(&types.TxHasher{}))
 
 		vm := NewVM(tx.Data, bc.contractState)
 		if err := vm.Run(); err != nil {
@@ -218,7 +225,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	bc.blockStore[b.Hash(types.BlockHasher{})] = b
 
 	for _, tx := range b.Transactions {
-		bc.txStore[tx.Hash(types.TxHasher{})] = tx
+		bc.txStore[tx.GetHash(types.TxHasher{})] = tx
 	}
 	bc.lock.Unlock()
 
