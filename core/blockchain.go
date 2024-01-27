@@ -228,6 +228,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	}
 	bc.lock.Unlock()
 
+	//bc.db.Put()
 	bc.logger.Log(
 		"msg", "🔗 add new block",
 		"hash", b.Hash(types.BlockHasher{}),

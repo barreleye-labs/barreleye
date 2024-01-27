@@ -8,7 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"sync"
 )
 
 func DefaultDataDir() string {
@@ -79,8 +78,7 @@ func homeDir() string {
 }
 
 type BarrelDatabase struct {
-	db   *leveldb.DB
-	lock sync.RWMutex
+	db *leveldb.DB
 }
 
 func New() (*BarrelDatabase, error) {
