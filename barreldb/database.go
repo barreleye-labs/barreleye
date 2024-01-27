@@ -12,15 +12,15 @@ import (
 )
 
 func DefaultDataDir() string {
-	//var nodeName string = ""
-	//flag.StringVar(&nodeName, "nodeName", "", "Node name")
-	//flag.Parse()
-	//fmt.Println("nonoaaa: ", nodeName)
+	_, filename, _, _ := runtime.Caller(0)
+	root := path.Join(path.Dir(filename), "..")
+
+	if flag.Lookup("nodeName") == nil {
+		return filepath.Join(root, "data")
+	}
 
 	nodeName := flag.Lookup("nodeName").Value.(flag.Getter).Get().(string)
 
-	_, filename, _, _ := runtime.Caller(0)
-	root := path.Join(path.Dir(filename), "..")
 	return filepath.Join(root, nodeName)
 
 	//// Try to place the data folder in the user's home dir

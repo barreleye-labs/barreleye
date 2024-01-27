@@ -59,12 +59,13 @@ func TestSendNativeTransferInsuffientBalance(t *testing.T) {
 	tx.To = privKeyAlice.PublicKey()
 	tx.Value = amount
 	tx.Sign(privKeyBob)
-	tx.Hash = common.Hash{}
+	//tx.Hash = common.Hash{}
 
 	fmt.Printf("alice => %s\n", privKeyAlice.PublicKey().Address())
 	fmt.Printf("bob => %s\n", privKeyBob.PublicKey().Address())
 
 	block.AddTransaction(tx)
+
 	assert.Nil(t, bc.AddBlock(block))
 
 	_, err := bc.accountState.GetAccount(privKeyAlice.PublicKey().Address())
