@@ -48,9 +48,8 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 	coinbase := crypto.PublicKey{}
 	accountState.CreateAccount(coinbase.Address())
 
-	fmt.Println("1111111")
 	db, _ := barreldb.New()
-	fmt.Println("2222222")
+
 	bc := &Blockchain{
 		contractState:   NewState(),
 		headers:         []*types.Header{},

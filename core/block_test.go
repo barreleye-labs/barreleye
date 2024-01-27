@@ -49,7 +49,6 @@ func randomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *types.
 	assert.Nil(t, err)
 	b.Header.DataHash = dataHash
 	assert.Nil(t, b.Sign(privKey))
-
 	return b
 }
 
