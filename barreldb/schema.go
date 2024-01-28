@@ -2,11 +2,15 @@ package barreldb
 
 var (
 	// key
-	databaseVersionKey = []byte("DatabaseVersion")
-	lastHeaderKey      = []byte("LastHeader")
-	lastBlockKey       = []byte("LastBlock")
+	DatabaseVersionKey = "DatabaseVersion"
+	LastHeaderKey      = "LastHeader"
+	LastBlockKey       = "LastBlock"
+
+	// table name
+	BlockTableName  = "block"
+	HeaderTableName = "header"
 
 	// prefix
-	blockPrefix  = []byte("b")
-	headerPrefix = []byte("h")
+	BlockPrefix  = "b"
+	HeaderPrefix = "h"
 )
