@@ -3,8 +3,9 @@ package restful
 import (
 	"encoding/gob"
 	"encoding/hex"
+	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
-	types2 "github.com/barreleye-labs/barreleye/core/types"
+	"github.com/barreleye-labs/barreleye/core/types"
 	"net/http"
 	"strconv"
 
@@ -41,12 +42,12 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	txChan chan *types2.Transaction
+	txChan chan *types.Transaction
 	ServerConfig
 	bc *core.Blockchain
 }
 
-func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types2.Transaction) *Server {
+func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transaction) *Server {
 	return &Server{
 		ServerConfig: cfg,
 		bc:           bc,
@@ -58,14 +59,30 @@ func (s *Server) Start() error {
 	e := echo.New()
 
 	e.GET("/block/:hashorid", s.handleGetBlock)
+	e.GET("/blocks", s.handleGetBlock)
 	e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/tx", s.handlePostTx)
 
 	return e.Start(s.ListenAddr)
 }
 
+func (s *Server) handleGetBlocksByHash(c echo.Context) {
+	query := c.QueryString()
+	fmt.Println("aaaa: ", query)
+	//for i := 0; i < size; i++ {
+	//	block := s.bc.GetBlock(hash, *number)
+	//	if block == nil {
+	//		break
+	//	}
+	//	blocks = append(blocks, block)
+	//	hash = block.ParentHash()
+	//	*number--
+	//}
+	return
+}
+
 func (s *Server) handlePostTx(c echo.Context) error {
-	tx := &types2.Transaction{}
+	tx := &types.Transaction{}
 	if err := gob.NewDecoder(c.Request().Body).Decode(tx); err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
@@ -120,18 +137,18 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 	return c.JSON(http.StatusOK, intoJSONBlock(block))
 }
 
-func intoJSONBlock(block *types2.Block) Block {
+func intoJSONBlock(block *types.Block) Block {
 	txResponse := TxResponse{
 		TxCount: uint(len(block.Transactions)),
 		Hashes:  make([]string, len(block.Transactions)),
 	}
 
 	for i := 0; i < int(txResponse.TxCount); i++ {
-		txResponse.Hashes[i] = block.Transactions[i].GetHash(types2.TxHasher{}).String()
+		txResponse.Hashes[i] = block.Transactions[i].GetHash(types.TxHasher{}).String()
 	}
 
 	return Block{
-		Hash:          block.Hash(types2.BlockHasher{}).String(),
+		Hash:          block.GetHash(types.BlockHasher{}).String(),
 		Version:       block.Header.Version,
 		Height:        block.Header.Height,
 		DataHash:      block.Header.DataHash.String(),

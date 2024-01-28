@@ -35,7 +35,7 @@ type Block struct {
 	Signature    *crypto.Signature
 
 	// Cached version of the header hash
-	hash common.Hash
+	Hash common.Hash
 }
 
 func NewBlock(h *Header, txx []*Transaction) (*Block, error) {
@@ -102,7 +102,7 @@ func (b *Block) Verify() error {
 	}
 
 	if dataHash != b.DataHash {
-		return fmt.Errorf("block (%s) has an invalid data hash", b.Hash(BlockHasher{}))
+		return fmt.Errorf("block (%s) has an invalid data hash", b.GetHash(BlockHasher{}))
 	}
 
 	return nil
@@ -116,12 +116,12 @@ func (b *Block) Encode(enc Encoder[*Block]) error {
 	return enc.Encode(b)
 }
 
-func (b *Block) Hash(hasher Hasher[*Header]) common.Hash {
-	if b.hash.IsZero() {
-		b.hash = hasher.Hash(b.Header)
+func (b *Block) GetHash(hasher Hasher[*Header]) common.Hash {
+	if b.Hash.IsZero() {
+		b.Hash = hasher.Hash(b.Header)
 	}
 
-	return b.hash
+	return b.Hash
 }
 
 func CalculateDataHash(txx []*Transaction) (hash common.Hash, err error) {
