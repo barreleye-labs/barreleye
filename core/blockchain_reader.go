@@ -1,9 +1,16 @@
 package core
 
-func (bc *Blockchain) GetBlockFromDB(key string) ([]byte, error) {
-	data, err := bc.db.GetTable("block").Get([]byte(key))
+import (
+	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/core/types"
+)
+
+func (bc *Blockchain) GetBlockByHashFromDB(hash common.Hash) (*types.Block, error) {
+	block, err := bc.db.GetBlock(hash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fail to get block")
 	}
-	return data, nil
+
+	return block, nil
 }

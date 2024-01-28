@@ -25,6 +25,9 @@ func (barrelDB *BarrelDatabase) Close() error {
 	return err
 }
 
+func (barrelDB *BarrelDatabase) GetT() map[string]*Table {
+	return barrelDB.tables
+}
 func (barrelDB *BarrelDatabase) CreateTable(name string, prefix string) error {
 	table := NewTable(barrelDB, prefix)
 	barrelDB.tables[name] = table
