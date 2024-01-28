@@ -10,6 +10,44 @@ import (
 	"runtime"
 )
 
+type BarrelDatabase struct {
+	db     *leveldb.DB
+	tables map[string]*Table
+}
+
+func New() (*BarrelDatabase, error) {
+	db, _ := leveldb.OpenFile(DefaultDataDir(), nil)
+	return &BarrelDatabase{db: db, tables: make(map[string]*Table)}, nil
+}
+
+func (barrelDB *BarrelDatabase) Close() error {
+	err := barrelDB.db.Close()
+	return err
+}
+
+func (barrelDB *BarrelDatabase) CreateTable(name string, prefix string) error {
+	table := NewTable(barrelDB, prefix)
+	barrelDB.tables[name] = table
+	return nil
+}
+
+func (barrelDB *BarrelDatabase) GetTable(name string) *Table {
+	return barrelDB.tables[name]
+}
+
+func (barrelDB *BarrelDatabase) Get(key []byte) ([]byte, error) {
+
+	return barrelDB.db.Get(key, nil)
+}
+
+func (barrelDB *BarrelDatabase) Has(key []byte) (bool, error) {
+	return barrelDB.db.Has(key, nil)
+}
+
+func (barrelDB *BarrelDatabase) Put(key []byte, value []byte) error {
+	return barrelDB.db.Put(key, value, nil)
+}
+
 func DefaultDataDir() string {
 	_, filename, _, _ := runtime.Caller(0)
 	root := path.Join(path.Dir(filename), "..")
@@ -75,32 +113,4 @@ func homeDir() string {
 		return usr.HomeDir
 	}
 	return ""
-}
-
-type BarrelDatabase struct {
-	db *leveldb.DB
-}
-
-func New() (*BarrelDatabase, error) {
-
-	db, _ := leveldb.OpenFile(DefaultDataDir(), nil)
-	return &BarrelDatabase{db: db}, nil
-}
-
-func (barrelDB *BarrelDatabase) Close() error {
-	err := barrelDB.db.Close()
-	return err
-}
-
-func (barrelDB *BarrelDatabase) Get(key []byte) ([]byte, error) {
-
-	return barrelDB.db.Get(key, nil)
-}
-
-func (barrelDB *BarrelDatabase) Has(key []byte) (bool, error) {
-	return barrelDB.db.Has(key, nil)
-}
-
-func (barrelDB *BarrelDatabase) Put(key []byte, value []byte) error {
-	return barrelDB.db.Put(key, value, nil)
 }

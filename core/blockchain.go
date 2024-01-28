@@ -31,16 +31,6 @@ type Blockchain struct {
 }
 
 func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
-	//db1, _ := barreldb.New()
-	//_ = db1.Put([]byte("김"), []byte("영민"))
-	//data, _ := db1.Get([]byte("김"))
-	//fmt.Println("valueaaaa: ", string(data))
-	//existed, _ := db1.Has([]byte("김"))
-	//fmt.Println("exisis: ", existed)
-	//existed1, _ := db1.Has([]byte("이"))
-	//fmt.Println("exisis1: ", existed1)
-	//_ = db1.Close()
-
 	// We should create all states inside the scope of the newblockchain.
 	// TODO: read this from disk later on
 	accountState := NewAccountState()
@@ -49,6 +39,14 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 	accountState.CreateAccount(coinbase.Address())
 
 	db, _ := barreldb.New()
+
+	/*
+		bc 객체가 없는 영역에서 db 활용 Sample
+
+		_ = db.CreateTable("block", barreldb.BlockPrefix)
+		_ = db.CreateBlock("kim", "youngmin")
+		data, _ := db.GetBlock("kim")
+	*/
 
 	bc := &Blockchain{
 		contractState:   NewState(),
@@ -64,6 +62,14 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 	}
 	bc.validator = NewBlockValidator(bc)
 	err := bc.addBlockWithoutValidation(genesis)
+
+	err = bc.db.CreateTable(barreldb.BlockTableName, barreldb.BlockPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("fail to create table %s", barreldb.BlockTableName)
+	}
+	_ = bc.CreateBlock("kim", "youngmin")
+	data, _ := bc.GetBlockFromDB("kim")
+	fmt.Println("data::: ", data)
 
 	return bc, err
 }
