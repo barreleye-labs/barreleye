@@ -32,14 +32,19 @@ func (bc *Blockchain) GetBlocks(page int, size int) ([]*types.Block, error) {
 		return nil, err
 	}
 
+	blocks := []*types.Block{}
+
 	lastBlockHeight := int(lastBlock.Height)
 	start := lastBlockHeight - offset
-	end := start - size
-	if end < 0 {
-		end = 0
+	if start < 0 {
+		return blocks, nil
 	}
 
-	blocks := []*types.Block{}
+	end := start - size
+	if end < -1 {
+		end = -1
+	}
+
 	for i := start; i > end; i-- {
 		block, err := bc.GetBlockByHeight(uint32(i))
 		if err != nil {
