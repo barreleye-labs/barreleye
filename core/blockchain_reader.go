@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 )
@@ -9,7 +8,16 @@ import (
 func (bc *Blockchain) GetBlockByHashFromDB(hash common.Hash) (*types.Block, error) {
 	block, err := bc.db.GetBlock(hash)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get block")
+		return nil, err
+	}
+
+	return block, nil
+}
+
+func (bc *Blockchain) GetBlockByHeight(height uint32) (*types.Block, error) {
+	block, err := bc.db.GetBlockByHeight(height)
+	if err != nil {
+		return nil, err
 	}
 
 	return block, nil

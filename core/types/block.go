@@ -6,9 +6,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
-	"time"
-
 	"github.com/barreleye-labs/barreleye/crypto"
+	"time"
 )
 
 type Header struct {
@@ -39,10 +38,12 @@ type Block struct {
 }
 
 func NewBlock(h *Header, txx []*Transaction) (*Block, error) {
-	return &Block{
+	block := &Block{
 		Header:       h,
 		Transactions: txx,
-	}, nil
+	}
+	block.Hash = block.GetHash(BlockHasher{})
+	return block, nil
 }
 
 func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, error) {

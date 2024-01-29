@@ -48,9 +48,13 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 		data, _ := db.GetBlock("kim")
 	*/
 
-	err := db.CreateTable(barreldb.BlockTableName, barreldb.BlockPrefix)
+	err := db.CreateTable(barreldb.HashBlockTableName, barreldb.HashBlockPrefix)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create table %s", barreldb.BlockTableName)
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.HeightBlockTableName, barreldb.HeightBlockPrefix)
+	if err != nil {
+		return nil, err
 	}
 
 	bc := &Blockchain{
@@ -67,10 +71,6 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 	}
 	bc.validator = NewBlockValidator(bc)
 	err = bc.addBlockWithoutValidation(genesis)
-
-	//_ = bc.CreateBlock("kim", "youngmin")
-	//data, _ := bc.GetBlockFromDB("kim")
-	//fmt.Println("data::: ", data)
 
 	return bc, err
 }
@@ -229,10 +229,13 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
 
-	_ = bc.CreateBlock(b.GetHash(types.BlockHasher{}), b)
+	_ = bc.CreateBlockWithHash(b.GetHash(types.BlockHasher{}), b)
 	data, _ := bc.GetBlockByHashFromDB(b.GetHash(types.BlockHasher{}))
-	fmt.Println("bbbb::: ", b)
-	fmt.Println("data::: ", data)
+	fmt.Println("hashblock::: ", data)
+
+	_ = bc.CreateBlockWithHeight(b.Height, b)
+	data, _ = bc.GetBlockByHeight(b.Height)
+	fmt.Println("heightblock::: ", data)
 
 	bc.blockStore[b.GetHash(types.BlockHasher{})] = b
 
@@ -241,7 +244,6 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	}
 	bc.lock.Unlock()
 
-	//bc.db.Put()
 	bc.logger.Log(
 		"msg", "🔗 add new block",
 		"hash", b.GetHash(types.BlockHasher{}),

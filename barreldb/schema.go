@@ -7,10 +7,10 @@ var (
 	LastBlockKey       = "LastBlock"
 
 	// table name
-	BlockTableName  = "block"
-	HeaderTableName = "header"
+	HashBlockTableName   = "hash-block"
+	HeightBlockTableName = "height-block"
 
 	// prefix
-	BlockPrefix  = "b"
-	HeaderPrefix = "h"
+	HashBlockPrefix   = "hash-block"
+	HeightBlockPrefix = "height-block"
 )
