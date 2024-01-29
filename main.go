@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/network"
+	"github.com/barreleye-labs/barreleye/net"
 )
 
 func main() {
@@ -112,8 +112,8 @@ func sendTransaction(privKey crypto.PrivateKey) error {
 	return err
 }
 
-func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *network.Server {
-	opts := network.ServerOpts{
+func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *net.Server {
+	opts := net.ServerOpts{
 		APIListenAddr: apiListenAddr,
 		SeedNodes:     seedNodes,
 		ListenAddr:    addr,
@@ -121,7 +121,7 @@ func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []strin
 		ID:            id,
 	}
 
-	s, err := network.NewServer(opts)
+	s, err := net.NewServer(opts)
 	if err != nil {
 		log.Fatal(err)
 	}

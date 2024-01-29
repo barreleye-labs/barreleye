@@ -4,13 +4,14 @@ var (
 	// key
 	DatabaseVersionKey = "DatabaseVersion"
 	LastHeaderKey      = "LastHeader"
-	LastBlockKey       = "LastBlock"
 
 	// table name
-	BlockTableName  = "block"
-	HeaderTableName = "header"
+	HashBlockTableName   = "hash-block"
+	HeightBlockTableName = "height-block"
+	LastBlockTableName   = "lastBlock"
 
 	// prefix
-	BlockPrefix  = "b"
-	HeaderPrefix = "h"
+	HashBlockPrefix   = "hash-block"
+	HeightBlockPrefix = "height-block"
+	LastBlockPrefix   = "lastBlock"
 )
