@@ -28,7 +28,7 @@ func (barrelDB *BarrelDatabase) GetBlock(hash common.Hash) (*types.Block, error)
 	bDecode := new(types.Block)
 	err = bDecode.Decode(types.NewGobBlockDecoder(bytes.NewBuffer(data)))
 	if err != nil {
-		return nil, fmt.Errorf("fail to decode block")
+		return nil, fmt.Errorf("failed to decode block")
 	}
 
 	return bDecode, nil

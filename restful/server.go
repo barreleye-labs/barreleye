@@ -15,8 +15,8 @@ import (
 )
 
 type TxResponse struct {
-	TxCount uint
-	Hashes  []string
+	TxCount uint     `json:"txCount"`
+	Hashes  []string `json:"hashes"`
 }
 
 type APIError struct {
@@ -24,16 +24,16 @@ type APIError struct {
 }
 
 type Block struct {
-	Hash          string
-	Version       uint32
-	DataHash      string
-	PrevBlockHash string
-	Height        uint32
-	Timestamp     int64
-	Validator     string
-	Signature     string
+	Hash          string `json:"hash"`
+	Version       uint32 `json:"version"`
+	DataHash      string `json:"dataHash"`
+	PrevBlockHash string `json:"prevBlockHash"`
+	Height        uint32 `json:"height"`
+	Timestamp     int64  `json:"timestamp"`
+	Validator     string `json:"validator"`
+	Signature     string `json:"signature"`
 
-	TxResponse TxResponse
+	TxResponse TxResponse `json:"txResponse"`
 }
 
 type ServerConfig struct {
@@ -59,26 +59,33 @@ func (s *Server) Start() error {
 	e := echo.New()
 
 	e.GET("/block/:hashorid", s.handleGetBlock)
-	e.GET("/blocks", s.handleGetBlock)
+	e.GET("/blocks", s.handleGetBlocksByHash)
 	e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/tx", s.handlePostTx)
 
 	return e.Start(s.ListenAddr)
 }
 
-func (s *Server) handleGetBlocksByHash(c echo.Context) {
-	query := c.QueryString()
-	fmt.Println("aaaa: ", query)
-	//for i := 0; i < size; i++ {
-	//	block := s.bc.GetBlock(hash, *number)
-	//	if block == nil {
-	//		break
-	//	}
-	//	blocks = append(blocks, block)
-	//	hash = block.ParentHash()
-	//	*number--
-	//}
-	return
+func (s *Server) handleGetBlocksByHash(c echo.Context) error {
+	query := c.QueryParams()
+
+	b, err := hex.DecodeString(query["hash"][0])
+	if err != nil {
+		return fmt.Errorf("failed to decode string")
+	}
+
+	hash := common.HashFromBytes(b)
+
+	size, err := strconv.Atoi(query["size"][0])
+	if err != nil {
+		return fmt.Errorf("failed to convert size type from string to int")
+	}
+	blocks, err := s.bc.GetBlocks(hash, size)
+	if err != nil {
+		return fmt.Errorf("failed to ")
+	}
+
+	return c.JSON(http.StatusOK, intoJSONBlocks(blocks))
 }
 
 func (s *Server) handlePostTx(c echo.Context) error {
@@ -158,4 +165,35 @@ func intoJSONBlock(block *types.Block) Block {
 		Signature:     block.Signature.String(),
 		TxResponse:    txResponse,
 	}
+}
+
+func intoJSONBlocks(blocks []*types.Block) []Block {
+	value := []Block{}
+	fmt.Println("111111: ", len(blocks))
+	for i := 0; i < len(blocks); i++ {
+		fmt.Println("22222: ", i)
+		txResponse := TxResponse{
+			TxCount: uint(len(blocks[i].Transactions)),
+			Hashes:  make([]string, len(blocks[i].Transactions)),
+		}
+
+		for j := 0; j < int(txResponse.TxCount); j++ {
+			txResponse.Hashes[j] = blocks[i].Transactions[j].GetHash(types.TxHasher{}).String()
+		}
+
+		b := Block{
+			Hash:          blocks[i].GetHash(types.BlockHasher{}).String(),
+			Version:       blocks[i].Header.Version,
+			Height:        blocks[i].Header.Height,
+			DataHash:      blocks[i].Header.DataHash.String(),
+			PrevBlockHash: blocks[i].PrevBlockHash.String(),
+			Timestamp:     blocks[i].Timestamp,
+			Validator:     blocks[i].Validator.Address().String(),
+			Signature:     blocks[i].Signature.String(),
+			TxResponse:    txResponse,
+		}
+
+		value = append(value, b)
+	}
+	return value
 }

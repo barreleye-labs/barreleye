@@ -50,7 +50,7 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 
 	err := db.CreateTable(barreldb.BlockTableName, barreldb.BlockPrefix)
 	if err != nil {
-		return nil, fmt.Errorf("fail to create table %s", barreldb.BlockTableName)
+		return nil, fmt.Errorf("failed to create table %s", barreldb.BlockTableName)
 	}
 
 	bc := &Blockchain{

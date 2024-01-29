@@ -8,7 +8,7 @@ import (
 
 func (bc *Blockchain) CreateBlock(hash common.Hash, block *types.Block) error {
 	if err := bc.db.CreateBlock(hash, block); err != nil {
-		return fmt.Errorf("fail to create block")
+		return fmt.Errorf("failed to create block")
 	}
 	return nil
 }
