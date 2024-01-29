@@ -57,6 +57,11 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 		return nil, err
 	}
 
+	err = db.CreateTable(barreldb.LastBlockTableName, barreldb.LastBlockPrefix)
+	if err != nil {
+		return nil, err
+	}
+
 	bc := &Blockchain{
 		contractState:   NewState(),
 		headers:         []*types.Header{},
@@ -236,6 +241,10 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	_ = bc.CreateBlockWithHeight(b.Height, b)
 	data, _ = bc.GetBlockByHeight(b.Height)
 	fmt.Println("heightblock::: ", data)
+
+	_ = bc.CreateLastBlock(b)
+	data, _ = bc.GetLastBlock()
+	fmt.Println("Lastblock::: ", data)
 
 	bc.blockStore[b.GetHash(types.BlockHasher{})] = b
 

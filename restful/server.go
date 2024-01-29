@@ -60,10 +60,20 @@ func (s *Server) Start() error {
 
 	e.GET("/block/:hashorid", s.handleGetBlock)
 	e.GET("/blocks", s.handleGetBlocksByHash)
+	e.GET("/last-block", s.handleGetLastBlock)
 	e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/tx", s.handlePostTx)
 
 	return e.Start(s.ListenAddr)
+}
+
+func (s *Server) handleGetLastBlock(c echo.Context) error {
+	block, err := s.bc.GetLastBlock()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, intoJSONBlock(block))
 }
 
 func (s *Server) handleGetBlocksByHash(c echo.Context) error {

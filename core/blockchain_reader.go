@@ -35,3 +35,12 @@ func (bc *Blockchain) GetBlocks(hash common.Hash, size int) ([]*types.Block, err
 	}
 	return blocks, nil
 }
+
+func (bc *Blockchain) GetLastBlock() (*types.Block, error) {
+	block, err := bc.db.GetLastBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}

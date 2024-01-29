@@ -18,3 +18,10 @@ func (bc *Blockchain) CreateBlockWithHeight(height uint32, block *types.Block) e
 	}
 	return nil
 }
+
+func (bc *Blockchain) CreateLastBlock(block *types.Block) error {
+	if err := bc.db.CreateLastBlock(block); err != nil {
+		return err
+	}
+	return nil
+}
