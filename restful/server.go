@@ -59,7 +59,7 @@ func (s *Server) Start() error {
 	e := echo.New()
 
 	e.GET("/block/:hashorid", s.handleGetBlock)
-	e.GET("/blocks", s.handleGetBlocksByHash)
+	e.GET("/blocks", s.handleGetBlocks)
 	e.GET("/last-block", s.handleGetLastBlock)
 	e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/tx", s.handlePostTx)
@@ -76,27 +76,48 @@ func (s *Server) handleGetLastBlock(c echo.Context) error {
 	return c.JSON(http.StatusOK, intoJSONBlock(block))
 }
 
-func (s *Server) handleGetBlocksByHash(c echo.Context) error {
+func (s *Server) handleGetBlocks(c echo.Context) error {
 	query := c.QueryParams()
 
-	b, err := hex.DecodeString(query["hash"][0])
+	page, err := strconv.Atoi(query["page"][0])
 	if err != nil {
-		return fmt.Errorf("failed to decode string")
+		return fmt.Errorf("failed to convert page type from string to int")
 	}
-
-	hash := common.HashFromBytes(b)
 
 	size, err := strconv.Atoi(query["size"][0])
 	if err != nil {
 		return fmt.Errorf("failed to convert size type from string to int")
 	}
-	blocks, err := s.bc.GetBlocks(hash, size)
+
+	blocks, err := s.bc.GetBlocks(page, size)
 	if err != nil {
-		return fmt.Errorf("failed to ")
+		return fmt.Errorf("failed to get blocks")
 	}
 
 	return c.JSON(http.StatusOK, intoJSONBlocks(blocks))
 }
+
+//func (s *Server) handleGetBlocksByHash(c echo.Context) error {
+//	query := c.QueryParams()
+//
+//	b, err := hex.DecodeString(query["hash"][0])
+//	if err != nil {
+//		return fmt.Errorf("failed to decode string")
+//	}
+//
+//	hash := common.HashFromBytes(b)
+//
+//	size, err := strconv.Atoi(query["size"][0])
+//	if err != nil {
+//		return fmt.Errorf("failed to convert size type from string to int")
+//	}
+//	blocks, err := s.bc.GetBlocks(hash, size)
+//	if err != nil {
+//		return fmt.Errorf("failed to ")
+//	}
+//
+//	return c.JSON(http.StatusOK, intoJSONBlocks(blocks))
+//}
 
 func (s *Server) handlePostTx(c echo.Context) error {
 	tx := &types.Transaction{}
