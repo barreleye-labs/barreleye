@@ -56,7 +56,6 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	err = db.CreateTable(barreldb.LastBlockTableName, barreldb.LastBlockPrefix)
 	if err != nil {
 		return nil, err
@@ -234,17 +233,28 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
 
-	_ = bc.CreateBlockWithHash(b.GetHash(types.BlockHasher{}), b)
-	data, _ := bc.GetBlockByHashFromDB(b.GetHash(types.BlockHasher{}))
-	fmt.Println("hashblock::: ", data)
+	if err := bc.CreateBlockWithHash(b.GetHash(types.BlockHasher{}), b); err != nil {
+		return err
+	}
 
-	_ = bc.CreateBlockWithHeight(b.Height, b)
-	data, _ = bc.GetBlockByHeight(b.Height)
-	fmt.Println("heightblock::: ", data)
+	if err := bc.CreateBlockWithHeight(b.Height, b); err != nil {
+		return err
+	}
 
-	_ = bc.CreateLastBlock(b)
-	data, _ = bc.GetLastBlock()
-	fmt.Println("Lastblock::: ", data)
+	if err := bc.CreateLastBlock(b); err != nil {
+		return err
+	}
+
+	//data, _ := bc.GetBlockByHashFromDB(b.GetHash(types.BlockHasher{}))
+	//val := hexutil.Encode(data.Hash.ToSlice())
+	//fmt.Println("hashblock::: ", val)
+	//fmt.Println("fefefefefk::: ", data.Hash.String())
+
+	//data, _ = bc.GetBlockByHeight(b.Height)
+	//fmt.Println("heightblock::: ", data)
+
+	//data, _ = bc.GetLastBlock()
+	//fmt.Println("Lastblock::: ", data)
 
 	bc.blockStore[b.GetHash(types.BlockHasher{})] = b
 

@@ -58,7 +58,8 @@ func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transac
 func (s *Server) Start() error {
 	e := echo.New()
 
-	e.GET("/block/:hashorid", s.handleGetBlock)
+	//e.GET("/block/:hashorid", s.handleGetBlock)
+	e.GET("/blocks/:id", s.handleGetBlock)
 	e.GET("/blocks", s.handleGetBlocks)
 	e.GET("/last-block", s.handleGetLastBlock)
 	e.GET("/tx/:hash", s.handleGetTx)
@@ -146,12 +147,12 @@ func (s *Server) handleGetTx(c echo.Context) error {
 }
 
 func (s *Server) handleGetBlock(c echo.Context) error {
-	hashOrID := c.Param("hashorid")
+	id := c.Param("id")
 
-	height, err := strconv.Atoi(hashOrID)
+	height, err := strconv.Atoi(id)
 	// If the error is nil we can assume the height of the block is given.
 	if err == nil {
-		block, err := s.bc.GetBlock(uint32(height))
+		block, err := s.bc.GetBlockByHeight(uint32(height))
 		if err != nil {
 			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
@@ -162,12 +163,12 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 
 	// otherwise assume its the hash
 
-	b, err := hex.DecodeString(hashOrID)
+	b, err := hex.DecodeString(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	block, err := s.bc.GetBlockByHash(common.HashFromBytes(b))
+	block, err := s.bc.GetBlockByHashFromDB(common.HashFromBytes(b))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}

@@ -1,6 +1,5 @@
-bin/barreleye
-
+bin
 node1
 node2
-
 data
+.idea

@@ -38,7 +38,7 @@ func main() {
 		node := makeServer("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
 		node.Start()
 	} else if nodeName == "node2" {
-		node := makeServer("NODE2", nil, ":4000", []string{":3000"}, "")
+		node := makeServer("NODE2", nil, ":4000", []string{":3000"}, ":9001")
 		node.Start()
 	} else if nodeName == "node3" {
 		node := makeServer("NODE3", nil, ":5000", []string{":4000"}, "")
