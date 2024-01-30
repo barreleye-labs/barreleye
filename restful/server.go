@@ -69,7 +69,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) handleGetLastBlock(c echo.Context) error {
-	block, err := s.bc.GetLastBlock()
+	block, err := s.bc.ReadLastBlock()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
@@ -90,7 +90,7 @@ func (s *Server) handleGetBlocks(c echo.Context) error {
 		return fmt.Errorf("failed to convert size type from string to int")
 	}
 
-	blocks, err := s.bc.GetBlocks(page, size)
+	blocks, err := s.bc.ReadBlocks(page, size)
 	if err != nil {
 		return fmt.Errorf("failed to get blocks")
 	}
@@ -152,7 +152,7 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 	height, err := strconv.Atoi(id)
 	// If the error is nil we can assume the height of the block is given.
 	if err == nil {
-		block, err := s.bc.GetBlockByHeight(uint32(height))
+		block, err := s.bc.ReadBlockByHeight(uint32(height))
 		if err != nil {
 			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
@@ -168,7 +168,7 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	block, err := s.bc.GetBlockByHashFromDB(common.HashFromBytes(b))
+	block, err := s.bc.ReadBlockByHash(common.HashFromBytes(b))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
@@ -201,9 +201,7 @@ func intoJSONBlock(block *types.Block) Block {
 
 func intoJSONBlocks(blocks []*types.Block) []Block {
 	value := []Block{}
-	fmt.Println("111111: ", len(blocks))
 	for i := 0; i < len(blocks); i++ {
-		fmt.Println("22222: ", i)
 		txResponse := TxResponse{
 			TxCount: uint(len(blocks[i].Transactions)),
 			Hashes:  make([]string, len(blocks[i].Transactions)),

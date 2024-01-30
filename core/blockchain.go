@@ -233,27 +233,27 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
 
-	if err := bc.CreateBlockWithHash(b.GetHash(types.BlockHasher{}), b); err != nil {
+	if err := bc.WriteBlockWithHash(b.GetHash(types.BlockHasher{}), b); err != nil {
 		return err
 	}
 
-	if err := bc.CreateBlockWithHeight(b.Height, b); err != nil {
+	if err := bc.WriteBlockWithHeight(b.Height, b); err != nil {
 		return err
 	}
 
-	if err := bc.CreateLastBlock(b); err != nil {
+	if err := bc.WriteLastBlock(b); err != nil {
 		return err
 	}
 
-	//data, _ := bc.GetBlockByHashFromDB(b.GetHash(types.BlockHasher{}))
+	//data, _ := bc.ReadBlockByHash(b.GetHash(types.BlockHasher{}))
 	//val := hexutil.Encode(data.Hash.ToSlice())
 	//fmt.Println("hashblock::: ", val)
 	//fmt.Println("fefefefefk::: ", data.Hash.String())
 
-	//data, _ = bc.GetBlockByHeight(b.Height)
+	//data, _ = bc.ReadBlockByHeight(b.Height)
 	//fmt.Println("heightblock::: ", data)
 
-	//data, _ = bc.GetLastBlock()
+	//data, _ = bc.ReadLastBlock()
 	//fmt.Println("Lastblock::: ", data)
 
 	bc.blockStore[b.GetHash(types.BlockHasher{})] = b

@@ -1,8 +1,8 @@
-package net
+package node
 
 import (
 	"github.com/barreleye-labs/barreleye/common"
-	types2 "github.com/barreleye-labs/barreleye/core/types"
+	"github.com/barreleye-labs/barreleye/core/types"
 	"sync"
 )
 
@@ -22,14 +22,14 @@ func NewTxPool(maxLength int) *TxPool {
 	}
 }
 
-func (p *TxPool) Add(tx *types2.Transaction) {
-	// 푸루닝
+func (p *TxPool) Add(tx *types.Transaction) {
+	// 프루닝
 	if p.all.Count() == p.maxLength {
 		oldest := p.all.First()
-		p.all.Remove(oldest.GetHash(types2.TxHasher{}))
+		p.all.Remove(oldest.GetHash(types.TxHasher{}))
 	}
 
-	if !p.all.Contains(tx.GetHash(types2.TxHasher{})) {
+	if !p.all.Contains(tx.GetHash(types.TxHasher{})) {
 		p.all.Add(tx)
 		p.pending.Add(tx)
 	}
@@ -40,7 +40,7 @@ func (p *TxPool) Contains(hash common.Hash) bool {
 }
 
 // Pending returns a slice of transactions that are in the pending pool
-func (p *TxPool) Pending() []*types2.Transaction {
+func (p *TxPool) Pending() []*types.Transaction {
 	return p.pending.txx.Data
 }
 
@@ -54,34 +54,34 @@ func (p *TxPool) PendingCount() int {
 
 type TxSortedMap struct {
 	lock   sync.RWMutex
-	lookup map[common.Hash]*types2.Transaction
-	txx    *common.List[*types2.Transaction]
+	lookup map[common.Hash]*types.Transaction
+	txx    *common.List[*types.Transaction]
 }
 
 func NewTxSortedMap() *TxSortedMap {
 	return &TxSortedMap{
-		lookup: make(map[common.Hash]*types2.Transaction),
-		txx:    common.NewList[*types2.Transaction](),
+		lookup: make(map[common.Hash]*types.Transaction),
+		txx:    common.NewList[*types.Transaction](),
 	}
 }
 
-func (t *TxSortedMap) First() *types2.Transaction {
+func (t *TxSortedMap) First() *types.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
 	first := t.txx.Get(0)
-	return t.lookup[first.GetHash(types2.TxHasher{})]
+	return t.lookup[first.GetHash(types.TxHasher{})]
 }
 
-func (t *TxSortedMap) Get(h common.Hash) *types2.Transaction {
+func (t *TxSortedMap) Get(h common.Hash) *types.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
 	return t.lookup[h]
 }
 
-func (t *TxSortedMap) Add(tx *types2.Transaction) {
-	hash := tx.GetHash(types2.TxHasher{})
+func (t *TxSortedMap) Add(tx *types.Transaction) {
+	hash := tx.GetHash(types.TxHasher{})
 
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -119,6 +119,6 @@ func (t *TxSortedMap) Clear() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.lookup = make(map[common.Hash]*types2.Transaction)
+	t.lookup = make(map[common.Hash]*types.Transaction)
 	t.txx.Clear()
 }

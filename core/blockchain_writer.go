@@ -5,22 +5,22 @@ import (
 	"github.com/barreleye-labs/barreleye/core/types"
 )
 
-func (bc *Blockchain) CreateBlockWithHash(hash common.Hash, block *types.Block) error {
-	if err := bc.db.CreateBlockWithHash(hash, block); err != nil {
+func (bc *Blockchain) WriteBlockWithHash(hash common.Hash, block *types.Block) error {
+	if err := bc.db.InsertBlockWithHash(hash, block); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (bc *Blockchain) CreateBlockWithHeight(height uint32, block *types.Block) error {
-	if err := bc.db.CreateBlockWithHeight(height, block); err != nil {
+func (bc *Blockchain) WriteBlockWithHeight(height uint32, block *types.Block) error {
+	if err := bc.db.InsertBlockWithHeight(height, block); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (bc *Blockchain) CreateLastBlock(block *types.Block) error {
-	if err := bc.db.CreateLastBlock(block); err != nil {
+func (bc *Blockchain) WriteLastBlock(block *types.Block) error {
+	if err := bc.db.InsertLastBlock(block); err != nil {
 		return err
 	}
 	return nil

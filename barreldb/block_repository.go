@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func (barrelDB *BarrelDatabase) CreateBlockWithHash(hash common.Hash, block *types.Block) error {
+func (barrelDB *BarrelDatabase) InsertBlockWithHash(hash common.Hash, block *types.Block) error {
 	buf := &bytes.Buffer{}
 	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
 		return err
@@ -19,7 +19,7 @@ func (barrelDB *BarrelDatabase) CreateBlockWithHash(hash common.Hash, block *typ
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) CreateBlockWithHeight(height uint32, block *types.Block) error {
+func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height uint32, block *types.Block) error {
 	buf := &bytes.Buffer{}
 	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
 		return err
@@ -31,7 +31,7 @@ func (barrelDB *BarrelDatabase) CreateBlockWithHeight(height uint32, block *type
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) CreateLastBlock(block *types.Block) error {
+func (barrelDB *BarrelDatabase) InsertLastBlock(block *types.Block) error {
 	buf := &bytes.Buffer{}
 	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
 		return err
@@ -43,7 +43,7 @@ func (barrelDB *BarrelDatabase) CreateLastBlock(block *types.Block) error {
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) GetBlock(hash common.Hash) (*types.Block, error) {
+func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Block, error) {
 	data, err := barrelDB.GetTable("hash-block").Get(hash.ToSlice())
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (barrelDB *BarrelDatabase) GetBlock(hash common.Hash) (*types.Block, error)
 	return bDecode, nil
 }
 
-func (barrelDB *BarrelDatabase) GetBlockByHeight(height uint32) (*types.Block, error) {
+func (barrelDB *BarrelDatabase) SelectBlockByHeight(height uint32) (*types.Block, error) {
 	data, err := barrelDB.GetTable("height-block").Get([]byte(strconv.Itoa(int(height))))
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (barrelDB *BarrelDatabase) GetBlockByHeight(height uint32) (*types.Block, e
 	return bDecode, nil
 }
 
-func (barrelDB *BarrelDatabase) GetLastBlock() (*types.Block, error) {
+func (barrelDB *BarrelDatabase) SelectLastBlock() (*types.Block, error) {
 	data, err := barrelDB.GetTable("lastBlock").Get([]byte{})
 	if err != nil {
 		return nil, err
