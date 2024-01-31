@@ -5,8 +5,8 @@ import (
 	"github.com/barreleye-labs/barreleye/core/types"
 )
 
-func (bc *Blockchain) GetBlockByHashFromDB(hash common.Hash) (*types.Block, error) {
-	block, err := bc.db.GetBlock(hash)
+func (bc *Blockchain) ReadBlockByHash(hash common.Hash) (*types.Block, error) {
+	block, err := bc.db.SelectBlockByHash(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -14,8 +14,8 @@ func (bc *Blockchain) GetBlockByHashFromDB(hash common.Hash) (*types.Block, erro
 	return block, nil
 }
 
-func (bc *Blockchain) GetBlockByHeight(height uint32) (*types.Block, error) {
-	block, err := bc.db.GetBlockByHeight(height)
+func (bc *Blockchain) ReadBlockByHeight(height uint32) (*types.Block, error) {
+	block, err := bc.db.SelectBlockByHeight(height)
 	if err != nil {
 		return nil, err
 	}
@@ -23,11 +23,11 @@ func (bc *Blockchain) GetBlockByHeight(height uint32) (*types.Block, error) {
 	return block, nil
 }
 
-func (bc *Blockchain) GetBlocks(page int, size int) ([]*types.Block, error) {
+func (bc *Blockchain) ReadBlocks(page int, size int) ([]*types.Block, error) {
 
 	offset := (page - 1) * size
 
-	lastBlock, err := bc.GetLastBlock()
+	lastBlock, err := bc.ReadLastBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (bc *Blockchain) GetBlocks(page int, size int) ([]*types.Block, error) {
 	}
 
 	for i := start; i > end; i-- {
-		block, err := bc.GetBlockByHeight(uint32(i))
+		block, err := bc.ReadBlockByHeight(uint32(i))
 		if err != nil {
 			return nil, err
 		}
@@ -56,10 +56,10 @@ func (bc *Blockchain) GetBlocks(page int, size int) ([]*types.Block, error) {
 	return blocks, nil
 }
 
-func (bc *Blockchain) GetBlocksByHash(hash common.Hash, size int) ([]*types.Block, error) {
+func (bc *Blockchain) ReadBlocksByHash(hash common.Hash, size int) ([]*types.Block, error) {
 	blocks := []*types.Block{}
 	for i := 0; i < size; i++ {
-		block, _ := bc.GetBlockByHashFromDB(hash)
+		block, _ := bc.ReadBlockByHash(hash)
 		if block == nil {
 			break
 		}
@@ -69,11 +69,79 @@ func (bc *Blockchain) GetBlocksByHash(hash common.Hash, size int) ([]*types.Bloc
 	return blocks, nil
 }
 
-func (bc *Blockchain) GetLastBlock() (*types.Block, error) {
-	block, err := bc.db.GetLastBlock()
+func (bc *Blockchain) ReadLastBlock() (*types.Block, error) {
+	block, err := bc.db.SelectLastBlock()
 	if err != nil {
 		return nil, err
 	}
 
 	return block, nil
+}
+
+func (bc *Blockchain) ReadTxByHash(hash common.Hash) (*types.Transaction, error) {
+	tx, err := bc.db.SelectTxByHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+func (bc *Blockchain) ReadTxByNumber(number uint32) (*types.Transaction, error) {
+	tx, err := bc.db.SelectTxByNumber(number)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+func (bc *Blockchain) ReadTxs(page int, size int) ([]*types.Transaction, error) {
+
+	offset := (page - 1) * size
+
+	lastTxNumber, err := bc.ReadLastTxNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	txs := []*types.Transaction{}
+
+	start := int(*lastTxNumber) - offset
+	if start < 0 {
+		return txs, nil
+	}
+
+	end := start - size
+	if end < -1 {
+		end = -1
+	}
+
+	for i := start; i > end; i-- {
+		tx, err := bc.ReadTxByNumber(uint32(i))
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, tx)
+	}
+
+	return txs, nil
+}
+
+func (bc *Blockchain) ReadLastTx() (*types.Transaction, error) {
+	tx, err := bc.db.SelectLastTx()
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+func (bc *Blockchain) ReadLastTxNumber() (*uint32, error) {
+	number, err := bc.db.SelectLastTxNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	return number, nil
 }

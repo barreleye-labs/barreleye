@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/barreleye-labs/barreleye/crypto"
-	"github.com/barreleye-labs/barreleye/net"
+	"github.com/barreleye-labs/barreleye/node"
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 		node := makeServer("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
 		node.Start()
 	} else if nodeName == "node2" {
-		node := makeServer("NODE2", nil, ":4000", []string{":3000"}, "")
+		node := makeServer("NODE2", nil, ":4000", []string{":3000"}, ":9001")
 		node.Start()
 	} else if nodeName == "node3" {
 		node := makeServer("NODE3", nil, ":5000", []string{":4000"}, "")
@@ -112,8 +112,8 @@ func sendTransaction(privKey crypto.PrivateKey) error {
 	return err
 }
 
-func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *net.Server {
-	opts := net.ServerOpts{
+func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *node.Node {
+	opts := node.NodeOpts{
 		APIListenAddr: apiListenAddr,
 		SeedNodes:     seedNodes,
 		ListenAddr:    addr,
@@ -121,7 +121,7 @@ func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []strin
 		ID:            id,
 	}
 
-	s, err := net.NewServer(opts)
+	s, err := node.NewNode(opts)
 	if err != nil {
 		log.Fatal(err)
 	}

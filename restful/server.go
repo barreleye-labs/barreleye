@@ -58,22 +58,49 @@ func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transac
 func (s *Server) Start() error {
 	e := echo.New()
 
-	e.GET("/block/:hashorid", s.handleGetBlock)
+	//e.GET("/block/:hashorid", s.handleGetBlock)
+	e.GET("/blocks/:id", s.handleGetBlock)
 	e.GET("/blocks", s.handleGetBlocks)
 	e.GET("/last-block", s.handleGetLastBlock)
-	e.GET("/tx/:hash", s.handleGetTx)
+	e.GET("txs/:id", s.handleGetTx)
+	e.GET("txs", s.handleGetTxs)
+	//e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/tx", s.handlePostTx)
 
 	return e.Start(s.ListenAddr)
 }
 
 func (s *Server) handleGetLastBlock(c echo.Context) error {
-	block, err := s.bc.GetLastBlock()
+	block, err := s.bc.ReadLastBlock()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, intoJSONBlock(block))
+}
+
+func (s *Server) handleGetTxs(c echo.Context) error {
+	query := c.QueryParams()
+
+	page, err := strconv.Atoi(query["page"][0])
+	if err != nil {
+		return fmt.Errorf("failed to convert page type from string to int")
+	}
+
+	size, err := strconv.Atoi(query["size"][0])
+	if err != nil {
+		return fmt.Errorf("failed to convert size type from string to int")
+	}
+	fmt.Println("111111")
+	txs, err := s.bc.ReadTxs(page, size)
+	fmt.Println("222222")
+	if err != nil {
+
+		fmt.Println("33333", err)
+		return fmt.Errorf("failed to get txs %s", err)
+	}
+
+	return c.JSON(http.StatusOK, txs)
 }
 
 func (s *Server) handleGetBlocks(c echo.Context) error {
@@ -89,7 +116,7 @@ func (s *Server) handleGetBlocks(c echo.Context) error {
 		return fmt.Errorf("failed to convert size type from string to int")
 	}
 
-	blocks, err := s.bc.GetBlocks(page, size)
+	blocks, err := s.bc.ReadBlocks(page, size)
 	if err != nil {
 		return fmt.Errorf("failed to get blocks")
 	}
@@ -129,15 +156,45 @@ func (s *Server) handlePostTx(c echo.Context) error {
 	return nil
 }
 
-func (s *Server) handleGetTx(c echo.Context) error {
-	hash := c.Param("hash")
+//func (s *Server) handleGetTx(c echo.Context) error {
+//	hash := c.Param("hash")
+//
+//	b, err := hex.DecodeString(hash)
+//	if err != nil {
+//		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+//	}
+//
+//	tx, err := s.bc.GetTxByHash(common.HashFromBytes(b))
+//	if err != nil {
+//		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+//	}
+//
+//	return c.JSON(http.StatusOK, tx)
+//}
 
-	b, err := hex.DecodeString(hash)
+func (s *Server) handleGetTx(c echo.Context) error {
+	id := c.Param("id")
+
+	number, err := strconv.Atoi(id)
+	// If the error is nil we can assume the height of the block is given.
+	if err == nil {
+		tx, err := s.bc.ReadTxByNumber(uint32(number))
+		if err != nil {
+			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
+		}
+
+		return c.JSON(http.StatusOK, tx)
+	}
+
+	// otherwise assume its the hash
+
+	hash, err := hex.DecodeString(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	tx, err := s.bc.GetTxByHash(common.HashFromBytes(b))
+	tx, err := s.bc.ReadTxByHash(common.HashFromBytes(hash))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
@@ -146,12 +203,12 @@ func (s *Server) handleGetTx(c echo.Context) error {
 }
 
 func (s *Server) handleGetBlock(c echo.Context) error {
-	hashOrID := c.Param("hashorid")
+	id := c.Param("id")
 
-	height, err := strconv.Atoi(hashOrID)
+	height, err := strconv.Atoi(id)
 	// If the error is nil we can assume the height of the block is given.
 	if err == nil {
-		block, err := s.bc.GetBlock(uint32(height))
+		block, err := s.bc.ReadBlockByHeight(uint32(height))
 		if err != nil {
 			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
@@ -162,12 +219,12 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 
 	// otherwise assume its the hash
 
-	b, err := hex.DecodeString(hashOrID)
+	b, err := hex.DecodeString(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	block, err := s.bc.GetBlockByHash(common.HashFromBytes(b))
+	block, err := s.bc.ReadBlockByHash(common.HashFromBytes(b))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
@@ -200,9 +257,7 @@ func intoJSONBlock(block *types.Block) Block {
 
 func intoJSONBlocks(blocks []*types.Block) []Block {
 	value := []Block{}
-	fmt.Println("111111: ", len(blocks))
 	for i := 0; i < len(blocks); i++ {
-		fmt.Println("22222: ", i)
 		txResponse := TxResponse{
 			TxCount: uint(len(blocks[i].Transactions)),
 			Hashes:  make([]string, len(blocks[i].Transactions)),

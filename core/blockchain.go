@@ -56,8 +56,24 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	err = db.CreateTable(barreldb.LastBlockTableName, barreldb.LastBlockPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.CreateTable(barreldb.HashTxTableName, barreldb.HashTxPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.NumberTxTableName, barreldb.NumberTxPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.LastTxTableName, barreldb.LastTxPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.LastTxNumberTableName, barreldb.LastTxNumberPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -234,22 +250,60 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
 
-	_ = bc.CreateBlockWithHash(b.GetHash(types.BlockHasher{}), b)
-	data, _ := bc.GetBlockByHashFromDB(b.GetHash(types.BlockHasher{}))
-	fmt.Println("hashblock::: ", data)
+	if err := bc.WriteBlockWithHash(b.GetHash(types.BlockHasher{}), b); err != nil {
+		return err
+	}
 
-	_ = bc.CreateBlockWithHeight(b.Height, b)
-	data, _ = bc.GetBlockByHeight(b.Height)
-	fmt.Println("heightblock::: ", data)
+	if err := bc.WriteBlockWithHeight(b.Height, b); err != nil {
+		return err
+	}
 
-	_ = bc.CreateLastBlock(b)
-	data, _ = bc.GetLastBlock()
-	fmt.Println("Lastblock::: ", data)
+	if err := bc.WriteLastBlock(b); err != nil {
+		return err
+	}
+
+	//data, _ := bc.ReadBlockByHash(b.GetHash(types.BlockHasher{}))
+	//val := hexutil.Encode(data.Hash.ToSlice())
+	//fmt.Println("hashblock::: ", val)
+	//fmt.Println("fefefefefk::: ", data.Hash.String())
+
+	//data, _ = bc.ReadBlockByHeight(b.Height)
+	//fmt.Println("heightblock::: ", data)
+
+	//data, _ = bc.ReadLastBlock()
+	//fmt.Println("Lastblock::: ", data)
 
 	bc.blockStore[b.GetHash(types.BlockHasher{})] = b
 
 	for _, tx := range b.Transactions {
 		bc.txStore[tx.GetHash(types.TxHasher{})] = tx
+
+		nextTxNumber := uint32(0)
+		number, err := bc.ReadLastTxNumber()
+		if err != nil {
+
+			//return err
+		}
+
+		if number != nil {
+			nextTxNumber = *number + 1
+		}
+
+		if err := bc.WriteTxWithHash(tx.GetHash(types.TxHasher{}), tx); err != nil {
+			return err
+		}
+
+		if err := bc.WriteTxWithNumber(nextTxNumber, tx); err != nil {
+			return err
+		}
+
+		if err := bc.WriteLastTx(tx); err != nil {
+			return err
+		}
+
+		if err := bc.WriteLastTxNumber(nextTxNumber); err != nil {
+			return err
+		}
 	}
 	bc.lock.Unlock()
 
