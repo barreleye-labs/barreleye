@@ -77,3 +77,71 @@ func (bc *Blockchain) ReadLastBlock() (*types.Block, error) {
 
 	return block, nil
 }
+
+func (bc *Blockchain) ReadTxByHash(hash common.Hash) (*types.Transaction, error) {
+	tx, err := bc.db.SelectTxByHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+func (bc *Blockchain) ReadTxByNumber(number uint32) (*types.Transaction, error) {
+	tx, err := bc.db.SelectTxByNumber(number)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+func (bc *Blockchain) ReadTxs(page int, size int) ([]*types.Transaction, error) {
+
+	offset := (page - 1) * size
+
+	lastTxNumber, err := bc.ReadLastTxNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	txs := []*types.Transaction{}
+
+	start := int(*lastTxNumber) - offset
+	if start < 0 {
+		return txs, nil
+	}
+
+	end := start - size
+	if end < -1 {
+		end = -1
+	}
+
+	for i := start; i > end; i-- {
+		tx, err := bc.ReadTxByNumber(uint32(i))
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, tx)
+	}
+
+	return txs, nil
+}
+
+func (bc *Blockchain) ReadLastTx() (*types.Transaction, error) {
+	tx, err := bc.db.SelectLastTx()
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+func (bc *Blockchain) ReadLastTxNumber() (*uint32, error) {
+	number, err := bc.db.SelectLastTxNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	return number, nil
+}

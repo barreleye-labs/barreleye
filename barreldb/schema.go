@@ -1,17 +1,23 @@
 package barreldb
 
 var (
-	// key
-	DatabaseVersionKey = "DatabaseVersion"
-	LastHeaderKey      = "LastHeader"
-
-	// table name
+	// table name ------------------------------------
 	HashBlockTableName   = "hash-block"
 	HeightBlockTableName = "height-block"
 	LastBlockTableName   = "lastBlock"
 
-	// prefix
+	HashTxTableName       = "hash-tx"
+	NumberTxTableName     = "number-tx"
+	LastTxTableName       = "lastTx"
+	LastTxNumberTableName = "lastTxNumber"
+
+	// prefix ----------------------------------------
 	HashBlockPrefix   = "hash-block"
 	HeightBlockPrefix = "height-block"
 	LastBlockPrefix   = "lastBlock"
+
+	HashTxPrefix       = "hash-tx"
+	NumberTxPrefix     = "number-tx"
+	LastTxPrefix       = "lastTx"
+	LastTxNumberPrefix = "lastTxNumber"
 )

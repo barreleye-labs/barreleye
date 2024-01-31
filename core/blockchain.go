@@ -61,6 +61,23 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 		return nil, err
 	}
 
+	err = db.CreateTable(barreldb.HashTxTableName, barreldb.HashTxPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.NumberTxTableName, barreldb.NumberTxPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.LastTxTableName, barreldb.LastTxPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.LastTxNumberTableName, barreldb.LastTxNumberPrefix)
+	if err != nil {
+		return nil, err
+	}
+
 	bc := &Blockchain{
 		contractState:   NewState(),
 		headers:         []*types.Header{},
@@ -260,6 +277,33 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 
 	for _, tx := range b.Transactions {
 		bc.txStore[tx.GetHash(types.TxHasher{})] = tx
+
+		nextTxNumber := uint32(0)
+		number, err := bc.ReadLastTxNumber()
+		if err != nil {
+
+			//return err
+		}
+
+		if number != nil {
+			nextTxNumber = *number + 1
+		}
+
+		if err := bc.WriteTxWithHash(tx.GetHash(types.TxHasher{}), tx); err != nil {
+			return err
+		}
+
+		if err := bc.WriteTxWithNumber(nextTxNumber, tx); err != nil {
+			return err
+		}
+
+		if err := bc.WriteLastTx(tx); err != nil {
+			return err
+		}
+
+		if err := bc.WriteLastTxNumber(nextTxNumber); err != nil {
+			return err
+		}
 	}
 	bc.lock.Unlock()
 

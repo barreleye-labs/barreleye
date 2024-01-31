@@ -49,13 +49,13 @@ func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Bloc
 		return nil, err
 	}
 
-	bDecode := new(types.Block)
-	err = bDecode.Decode(types.NewGobBlockDecoder(bytes.NewBuffer(data)))
+	block := new(types.Block)
+	err = block.Decode(types.NewGobBlockDecoder(bytes.NewBuffer(data)))
 	if err != nil {
 		return nil, err
 	}
 
-	return bDecode, nil
+	return block, nil
 }
 
 func (barrelDB *BarrelDatabase) SelectBlockByHeight(height uint32) (*types.Block, error) {
@@ -64,13 +64,13 @@ func (barrelDB *BarrelDatabase) SelectBlockByHeight(height uint32) (*types.Block
 		return nil, err
 	}
 
-	bDecode := new(types.Block)
-	err = bDecode.Decode(types.NewGobBlockDecoder(bytes.NewBuffer(data)))
+	block := new(types.Block)
+	err = block.Decode(types.NewGobBlockDecoder(bytes.NewBuffer(data)))
 	if err != nil {
 		return nil, err
 	}
 
-	return bDecode, nil
+	return block, nil
 }
 
 func (barrelDB *BarrelDatabase) SelectLastBlock() (*types.Block, error) {
@@ -79,11 +79,11 @@ func (barrelDB *BarrelDatabase) SelectLastBlock() (*types.Block, error) {
 		return nil, err
 	}
 
-	bDecode := new(types.Block)
-	err = bDecode.Decode(types.NewGobBlockDecoder(bytes.NewBuffer(data)))
+	block := new(types.Block)
+	err = block.Decode(types.NewGobBlockDecoder(bytes.NewBuffer(data)))
 	if err != nil {
 		return nil, err
 	}
 
-	return bDecode, nil
+	return block, nil
 }

@@ -25,3 +25,31 @@ func (bc *Blockchain) WriteLastBlock(block *types.Block) error {
 	}
 	return nil
 }
+
+func (bc *Blockchain) WriteTxWithHash(hash common.Hash, tx *types.Transaction) error {
+	if err := bc.db.InsertTxWithHash(hash, tx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (bc *Blockchain) WriteTxWithNumber(number uint32, tx *types.Transaction) error {
+	if err := bc.db.InsertTxWithNumber(number, tx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (bc *Blockchain) WriteLastTx(tx *types.Transaction) error {
+	if err := bc.db.InsertLastTx(tx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (bc *Blockchain) WriteLastTxNumber(number uint32) error {
+	if err := bc.db.InsertLastTxNumber(number); err != nil {
+		return err
+	}
+	return nil
+}
