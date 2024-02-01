@@ -2,8 +2,10 @@ package crypto
 
 import (
 	"crypto/elliptic"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math/big"
 	"testing"
 
@@ -34,9 +36,19 @@ func MakeByteToBigint(data []byte) *big.Int {
 }
 
 func TestKeypairSignVerifySuccess2(t *testing.T) {
-	msg := []byte("hello")
+	msgHash := fmt.Sprintf(
+		"%x",
+		sha256.Sum256([]byte("hello")),
+	)
 
-	sigBytes, _ := hex.DecodeString("79447872796349563076636b574d4348552f575759434c70356357536c64467143444c6b6175554748327a37524c575277417142344643542f4d446b3346636b58373069477747347756373739346455734e617034513d3d")
+	msg, hashDecodeError := hex.DecodeString(msgHash)
+
+	if hashDecodeError != nil {
+		log.Println(hashDecodeError)
+		panic("internal server error")
+	}
+
+	sigBytes, _ := hex.DecodeString("970bde5760aaee9ed846e2df130377bde7232e359bf60c7a1a4d6e0bd8c4ecf38980169f06bbc787bac22b3c4dec3ab63853a2e3efb074d119efd96647ea5de7")
 	fmt.Println("sigBytes: ", sigBytes)
 	fmt.Println("sigBytesS: ", MakeByteToBigint(sigBytes[32:]))
 	fmt.Println("sigBytesR: ", MakeByteToBigint(sigBytes[:32]))
@@ -45,8 +57,8 @@ func TestKeypairSignVerifySuccess2(t *testing.T) {
 		R: MakeByteToBigint(sigBytes[:32]),
 	}
 
-	xbytes, _ := hex.DecodeString("eff8b37fa642fca1114d42f8d7d85d0278dde4a8709ef950381e05b5a35a3df6")
-	ybytes, _ := hex.DecodeString("42e831f18a317edd43f9ad02aeec95b3142a662b5a140976b07a0aba0257fea3")
+	xbytes, _ := hex.DecodeString("b286847d97818b6b7acc377fab09522d3b17954279a6bd236b0a16031e9df818")
+	ybytes, _ := hex.DecodeString("9867d1b6f7b922073c53908111ccea65cc803ce54b15d44ef33a6c40ff3d8c6d")
 	x := MakeByteToBigint(xbytes)
 	y := MakeByteToBigint(ybytes)
 
