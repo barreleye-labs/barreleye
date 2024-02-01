@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"crypto/elliptic"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -28,39 +29,31 @@ func MakeByteToBigint(data []byte) *big.Int {
 	result := new(big.Int)
 	result.SetBytes(data)
 
-	fmt.Println("바이트슬라이스 -> 빅인트 :", result)
+	//fmt.Println("바이트슬라이스 -> 빅인트 :", result)
 	return result
 }
 
 func TestKeypairSignVerifySuccess2(t *testing.T) {
-	//msg := []byte("hello world")
+	msg := []byte("hello")
 
-	sigBytes, _ := hex.DecodeString("b1413bdc270769a4da265c198bd2ec2b48b05094359fa35fde299f9abad370b70e3c912d94df0e3ee4c855b16f4ee114bd754a67a4519d1e1eed9ad00601670f")
+	sigBytes, _ := hex.DecodeString("79447872796349563076636b574d4348552f575759434c70356357536c64467143444c6b6175554748327a37524c575277417142344643542f4d446b3346636b58373069477747347756373739346455734e617034513d3d")
 	fmt.Println("sigBytes: ", sigBytes)
 	fmt.Println("sigBytesS: ", MakeByteToBigint(sigBytes[32:]))
 	fmt.Println("sigBytesR: ", MakeByteToBigint(sigBytes[:32]))
-	s := &Signature{
+	signature := &Signature{
 		S: MakeByteToBigint(sigBytes[32:]),
 		R: MakeByteToBigint(sigBytes[:32]),
 	}
-	pubkey := []byte{195, 190, 123, 195, 135, 194, 187, 195, 180, 194, 144, 65,
-		194, 170, 44, 195, 181, 53, 37, 194, 141, 11, 20, 194,
-		184, 194, 162, 53, 195, 165, 194, 154, 195, 185, 73, 194,
-		166, 195, 143, 194, 173, 194, 188, 45, 109, 195, 180, 195,
-		191, 195, 163, 79, 43, 194, 145, 85, 115, 194, 171, 195,
-		139, 195, 128, 194, 138, 195, 134, 195, 129, 70, 106, 94,
-		69, 17, 23, 194, 143, 194, 150, 194, 168, 194, 131, 195,
-		179, 42, 195, 177, 26, 195, 157, 99, 46, 195, 185, 91,
-		195, 154, 194, 191, 34}
-	pub := PublicKey(pubkey)
-	fmt.Println("aaa: ", pub)
-	fmt.Println(s)
-	//sig, err := privKey.Sign(msg)
-	//fmt.Println("sig:", sig)
-	//fmt.Println("sigstr:", sig.String())
-	//assert.Nil(t, err)
-	//
-	//assert.True(t, sig.Verify(publicKey, msg))
+
+	xbytes, _ := hex.DecodeString("eff8b37fa642fca1114d42f8d7d85d0278dde4a8709ef950381e05b5a35a3df6")
+	ybytes, _ := hex.DecodeString("42e831f18a317edd43f9ad02aeec95b3142a662b5a140976b07a0aba0257fea3")
+	x := MakeByteToBigint(xbytes)
+	y := MakeByteToBigint(ybytes)
+
+	publicKey := elliptic.MarshalCompressed(elliptic.P256(), x, y)
+	fmt.Println("publicKey: ", publicKey)
+	fmt.Println("signature: ", signature)
+	assert.True(t, signature.Verify(publicKey, msg))
 }
 
 func TestKeypairSignVerifyFail(t *testing.T) {
