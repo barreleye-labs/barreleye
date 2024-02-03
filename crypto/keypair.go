@@ -2,17 +2,18 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/barreleye-labs/barreleye/common"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"io"
 	"math/big"
 )
 
 type PrivateKey struct {
-	key *ecdsa.PrivateKey
+	key       *ecdsa.PrivateKey
+	publicKey PublicKey
 }
 
 func (k PrivateKey) Sign(data []byte) (*Signature, error) {
@@ -28,13 +29,18 @@ func (k PrivateKey) Sign(data []byte) (*Signature, error) {
 }
 
 func NewPrivateKeyFromReader(r io.Reader) PrivateKey {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), r)
+	key, err := ecdsa.GenerateKey(secp256k1.S256(), r) //ether 말고도 있음
 	if err != nil {
 		panic(err)
 	}
 
+	publicKey := PublicKey{
+		&key.PublicKey,
+	}
+
 	return PrivateKey{
-		key: key,
+		key:       key,
+		publicKey: publicKey,
 	}
 }
 
@@ -44,17 +50,19 @@ func GeneratePrivateKey() PrivateKey {
 }
 
 func (k PrivateKey) PublicKey() PublicKey {
-	return elliptic.MarshalCompressed(k.key.PublicKey, k.key.PublicKey.X, k.key.PublicKey.Y)
+	return k.publicKey
 }
 
-type PublicKey []byte
+type PublicKey struct {
+	Key *ecdsa.PublicKey
+}
 
 func (k PublicKey) String() string {
-	return hex.EncodeToString(k)
+	return "tempPublicKeyString"
 }
 
 func (k PublicKey) Address() common.Address {
-	h := sha256.Sum256(k)
+	h := sha256.Sum256([]byte("tempPublicKeyString"))
 
 	return common.NewAddressFromBytes(h[len(h)-20:])
 }
@@ -69,13 +77,6 @@ func (sig Signature) String() string {
 	return hex.EncodeToString(b)
 }
 
-func (sig Signature) Verify(pubKey PublicKey, data []byte) bool {
-	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), pubKey)
-	key := &ecdsa.PublicKey{
-		Curve: elliptic.P256(),
-		X:     x,
-		Y:     y,
-	}
-
-	return ecdsa.Verify(key, data, sig.R, sig.S)
+func (sig Signature) Verify(publicKey PublicKey, data []byte) bool {
+	return ecdsa.Verify(publicKey.Key, data, sig.R, sig.S)
 }
