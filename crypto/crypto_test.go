@@ -1,7 +1,13 @@
 package crypto
 
 import (
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"math/big"
 	"testing"
 )
@@ -15,6 +21,46 @@ func TestKeypairSignVerifySuccess(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.True(t, sig.Verify(publicKey, msg))
+}
+
+func TestKeypairSignVerifySuccess3(t *testing.T) {
+	xVal := new(big.Int)
+	xVal.SetString("77285c4c273f3139c875b875b83e99b37fb1b0d9f82026361ef2278972fffc35", 16)
+	yVal := new(big.Int)
+	yVal.SetString("afb7806f1da92df2d2c3626dcc74daaa108016a409e3f6adceb34cdc0dd522f1", 16)
+
+	rVal := new(big.Int)
+	rVal.SetString("25a4cc9d2176c973dbbbc87e3de512735f85c7bfc88913b8d076bab7abf2b721", 16)
+	sVal := new(big.Int)
+	sVal.SetString("1f67d8aa3bd0ac77ad02bada5609489a2161b6d6c82e606728e4aa19760746b6", 16)
+
+	msgHash := fmt.Sprintf(
+		"%x",
+		sha256.Sum256([]byte("hello")),
+	)
+
+	message, hashDecodeError := hex.DecodeString(msgHash)
+
+	if hashDecodeError != nil {
+		log.Println(hashDecodeError)
+		panic("internal server error")
+	}
+
+	ecdsaPublicKey := ecdsa.PublicKey{
+		Curve: secp256k1.S256(),
+		X:     xVal,
+		Y:     yVal,
+	}
+
+	publicKey := PublicKey{
+		Key: &ecdsaPublicKey,
+	}
+
+	signature := Signature{
+		S: sVal,
+		R: rVal,
+	}
+	assert.True(t, signature.Verify(publicKey, message))
 }
 
 func MakeByteToBigint(data []byte) *big.Int {
