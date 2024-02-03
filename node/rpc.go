@@ -2,10 +2,10 @@ package node
 
 import (
 	"bytes"
-	"crypto/elliptic"
 	"encoding/gob"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/core/types"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"io"
 	"net"
 
@@ -139,5 +139,5 @@ type RPCProcessor interface {
 }
 
 func init() {
-	gob.Register(elliptic.P256())
+	gob.Register(secp256k1.S256())
 }
