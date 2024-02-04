@@ -13,9 +13,16 @@ type Hasher[T any] interface {
 
 type BlockHasher struct{}
 
-func (BlockHasher) Hash(b *Header) common.Hash {
-	h := sha256.Sum256(b.Bytes())
-	return common.Hash(h)
+func (BlockHasher) Hash(header *Header) common.Hash {
+	buf := new(bytes.Buffer)
+
+	binary.Write(buf, binary.LittleEndian, header.Version)
+	binary.Write(buf, binary.LittleEndian, header.DataHash)
+	binary.Write(buf, binary.LittleEndian, header.PrevBlockHash)
+	binary.Write(buf, binary.LittleEndian, header.Height)
+	binary.Write(buf, binary.LittleEndian, header.Timestamp)
+
+	return sha256.Sum256(buf.Bytes())
 }
 
 type TxHasher struct{}
@@ -30,5 +37,5 @@ func (TxHasher) Hash(tx *Transaction) common.Hash {
 	binary.Write(buf, binary.LittleEndian, tx.From)
 	binary.Write(buf, binary.LittleEndian, tx.Nonce)
 
-	return common.Hash(sha256.Sum256(buf.Bytes()))
+	return sha256.Sum256(buf.Bytes())
 }

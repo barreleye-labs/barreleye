@@ -51,7 +51,8 @@ func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, err
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("prevblockhashss: ", BlockHasher{}.Hash(prevHeader))
+	fmt.Println("prevheader: ", prevHeader)
 	header := &Header{
 		Version:       1,
 		Height:        prevHeader.Height + 1,
@@ -70,7 +71,7 @@ func (b *Block) AddTransaction(tx *Transaction) {
 }
 
 func (b *Block) Sign(privKey crypto.PrivateKey) error {
-	sig, err := privKey.Sign(b.Header.Bytes())
+	sig, err := privKey.Sign(BlockHasher{}.Hash(b.Header).ToSlice())
 	if err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func (b *Block) Verify() error {
 		return fmt.Errorf("block has no signature")
 	}
 
-	if !b.Signature.Verify(b.Validator, b.Header.Bytes()) {
+	if !b.Signature.Verify(b.Validator, BlockHasher{}.Hash(b.Header).ToSlice()) {
 		// if !b.Signature.Verify(b.Validator, []byte("foo")) {
 		return fmt.Errorf("block has invalid signature")
 	}

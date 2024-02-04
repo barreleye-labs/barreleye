@@ -60,11 +60,17 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		opts.Logger = log.With(opts.Logger, "addr", opts.ID)
 	}
 
-	chain, err := core.NewBlockchain(opts.Logger, genesisBlock())
+	var genesis *types.Block = nil
+	if opts.PrivateKey != nil {
+		genesis = genesisBlock(opts.PrivateKey)
+	}
+
+	chain, err := core.NewBlockchain(opts.Logger, opts.PrivateKey, genesis)
 	if err != nil {
 		return nil, err
 	}
-
+	aaa, _ := chain.GetHeader(0)
+	fmt.Println("ggggggggg: ", aaa)
 	txChan := make(chan *types.Transaction)
 
 	if len(opts.APIListenAddr) > 0 {
@@ -281,6 +287,7 @@ func (n *Node) processBlocksMessage(from net.Addr, data *BlocksMessage) error {
 	n.Logger.Log("msg", "📦 received BLOCKS", "from", from, "aff:", data.Blocks)
 
 	for _, block := range data.Blocks {
+		fmt.Println("recieved genenesis: ", block.Header)
 		if err := n.chain.AddBlock(block); err != nil {
 			n.Logger.Log("error", err.Error())
 			return err
@@ -371,7 +378,6 @@ func (n *Node) requestBlocksLoop(peer net.Addr) error {
 
 	for {
 		ourHeight := n.chain.Height()
-
 		n.Logger.Log("msg", "👋 requesting block height from", ourHeight+1)
 
 		getBlocksMessage := &GetBlocksMessage{
@@ -424,7 +430,11 @@ func (n *Node) broadcastTx(tx *types.Transaction) error {
 }
 
 func (n *Node) createNewBlock() error {
-	currentHeader, err := n.chain.GetHeader(n.chain.Height())
+	if n.chain.Height() < 0 {
+		return fmt.Errorf("can not create block without genesis block")
+	}
+
+	currentHeader, err := n.chain.GetHeader(uint32(n.chain.Height()))
 	if err != nil {
 		return err
 	}
@@ -453,7 +463,7 @@ func (n *Node) createNewBlock() error {
 	return nil
 }
 
-func genesisBlock() *types.Block {
+func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	header := &types.Header{
 		Version:   1,
 		DataHash:  common.Hash{},
@@ -463,7 +473,7 @@ func genesisBlock() *types.Block {
 
 	b, _ := types.NewBlock(header, nil)
 
-	coinbase := crypto.PublicKey{}
+	coinbase := privateKey.PublicKey()
 	tx := types.NewTransaction(nil)
 	tx.From = coinbase
 	tx.To = coinbase

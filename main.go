@@ -1,15 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/barreleye-labs/barreleye/common"
-	"github.com/barreleye-labs/barreleye/common/util"
-	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/barreleye-labs/barreleye/crypto"
@@ -35,13 +29,13 @@ func main() {
 
 	if nodeName == "node1" {
 		validatorPrivKey := crypto.GeneratePrivateKey()
-		node := makeServer("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
+		node := createNode("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
 		node.Start()
 	} else if nodeName == "node2" {
-		node := makeServer("NODE2", nil, ":4000", []string{":3000"}, ":9001")
+		node := createNode("NODE2", nil, ":4000", []string{":3000"}, ":9001")
 		node.Start()
 	} else if nodeName == "node3" {
-		node := makeServer("NODE3", nil, ":5000", []string{":4000"}, "")
+		node := createNode("NODE3", nil, ":5000", []string{":4000"}, "")
 		node.Start()
 	}
 
@@ -66,53 +60,10 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 
-	// if err := sendTransaction(validatorPrivKey); err != nil {
-	// 	panic(err)
-	// }
-
-	// collectionOwnerPrivKey := crypto.GeneratePrivateKey()
-	// collectionHash := createCollectionTx(collectionOwnerPrivKey)
-
-	// txSendTicker := time.NewTicker(1 * time.Second)
-	// go func() {
-	// 	for i := 0; i < 20; i++ {
-	// 		nftMinter(collectionOwnerPrivKey, collectionHash)
-
-	// 		<-txSendTicker.C
-	// 	}
-	// }()
-
 	select {}
 }
 
-func sendTransaction(privKey crypto.PrivateKey) error {
-	toPrivKey := crypto.GeneratePrivateKey()
-
-	tx := types.NewTransaction(nil)
-	tx.To = toPrivKey.PublicKey()
-	tx.Value = 666
-
-	if err := tx.Sign(privKey); err != nil {
-		return err
-	}
-
-	buf := &bytes.Buffer{}
-	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
-		panic(err)
-	}
-
-	req, err := http.NewRequest("POST", "http://localhost:9000/tx", buf)
-	if err != nil {
-		panic(err)
-	}
-
-	client := http.Client{}
-	_, err = client.Do(req)
-
-	return err
-}
-
-func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *node.Node {
+func createNode(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *node.Node {
 	opts := node.NodeOpts{
 		APIListenAddr: apiListenAddr,
 		SeedNodes:     seedNodes,
@@ -127,71 +78,4 @@ func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []strin
 	}
 
 	return s
-}
-
-func createCollectionTx(privKey crypto.PrivateKey) common.Hash {
-	tx := types.NewTransaction(nil)
-	tx.TxInner = types.CollectionTx{
-		Fee:      200,
-		MetaData: []byte("chicken and egg collection!"),
-	}
-	tx.Sign(privKey)
-
-	buf := &bytes.Buffer{}
-	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
-		panic(err)
-	}
-
-	req, err := http.NewRequest("POST", "http://localhost:9000/tx", buf)
-	if err != nil {
-		panic(err)
-	}
-
-	client := http.Client{}
-	_, err = client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	return tx.GetHash(types.TxHasher{})
-}
-
-func nftMinter(privKey crypto.PrivateKey, collection common.Hash) {
-	metaData := map[string]any{
-		"power":  8,
-		"health": 100,
-		"color":  "green",
-		"rare":   "yes",
-	}
-
-	metaBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(metaBuf).Encode(metaData); err != nil {
-		panic(err)
-	}
-
-	tx := types.NewTransaction(nil)
-	tx.TxInner = types.MintTx{
-		Fee:             200,
-		NFT:             util.RandomHash(),
-		MetaData:        metaBuf.Bytes(),
-		Collection:      collection,
-		CollectionOwner: privKey.PublicKey(),
-	}
-	tx.Sign(privKey)
-
-	buf := &bytes.Buffer{}
-	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
-		panic(err)
-	}
-
-	req, err := http.NewRequest("POST", "http://localhost:9000/tx", buf)
-	if err != nil {
-		panic(err)
-	}
-
-	client := http.Client{}
-	_, err = client.Do(req)
-	if err != nil {
-		panic(err)
-	}
 }
