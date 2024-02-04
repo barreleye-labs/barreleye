@@ -15,28 +15,26 @@ type Blockchain struct {
 	logger log.Logger
 	store  Storage
 	// TODO: double check this!
-	lock            sync.RWMutex
-	headers         []*types.Header
-	blocks          []*types.Block
-	txStore         map[common.Hash]*types.Transaction
-	blockStore      map[common.Hash]*types.Block
-	accountState    *AccountState
-	stateLock       sync.RWMutex
-	collectionState map[common.Hash]*types.CollectionTx
-	mintState       map[common.Hash]*types.MintTx
-	validator       Validator
+	lock         sync.RWMutex
+	headers      []*types.Header
+	blocks       []*types.Block
+	txStore      map[common.Hash]*types.Transaction
+	blockStore   map[common.Hash]*types.Block
+	accountState *AccountState
+	stateLock    sync.RWMutex
+	validator    Validator
 	// TODO: make this an interface.
 	contractState *State
 	db            *barreldb.BarrelDatabase
 }
 
-func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
+func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.Block) (*Blockchain, error) {
 	// We should create all states inside the scope of the newblockchain.
 	// TODO: read this from disk later on
 	accountState := NewAccountState()
 
-	coinbase := crypto.PublicKey{}
-	accountState.CreateAccount(coinbase.Address())
+	//coinbase := privateKey.PublicKey()
+	//accountState.CreateAccount(coinbase.Address())
 
 	db, _ := barreldb.New()
 
@@ -79,19 +77,20 @@ func NewBlockchain(l log.Logger, genesis *types.Block) (*Blockchain, error) {
 	}
 
 	bc := &Blockchain{
-		contractState:   NewState(),
-		headers:         []*types.Header{},
-		store:           NewMemorystore(),
-		logger:          l,
-		accountState:    accountState,
-		collectionState: make(map[common.Hash]*types.CollectionTx),
-		mintState:       make(map[common.Hash]*types.MintTx),
-		blockStore:      make(map[common.Hash]*types.Block),
-		txStore:         make(map[common.Hash]*types.Transaction),
-		db:              db,
+		contractState: NewState(),
+		headers:       []*types.Header{},
+		store:         NewMemorystore(),
+		logger:        l,
+		accountState:  accountState,
+		blockStore:    make(map[common.Hash]*types.Block),
+		txStore:       make(map[common.Hash]*types.Transaction),
+		db:            db,
 	}
 	bc.validator = NewBlockValidator(bc)
-	err = bc.addBlockWithoutValidation(genesis)
+
+	if genesis != nil {
+		err = bc.addBlockWithoutValidation(genesis)
+	}
 
 	return bc, err
 }
@@ -118,28 +117,6 @@ func (bc *Blockchain) handleNativeTransfer(tx *types.Transaction) error {
 	return bc.accountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
 }
 
-func (bc *Blockchain) handleNativeNFT(tx *types.Transaction) error {
-	hash := tx.GetHash(types.TxHasher{})
-
-	switch t := tx.TxInner.(type) {
-	case types.CollectionTx:
-		bc.collectionState[hash] = &t
-		bc.logger.Log("msg", "created new NFT collection", "hash", hash)
-	case types.MintTx:
-		_, ok := bc.collectionState[t.Collection]
-		if !ok {
-			return fmt.Errorf("collection (%s) does not exist on the blockchain", t.Collection)
-		}
-		bc.mintState[hash] = &t
-
-		bc.logger.Log("msg", "created new NFT mint", "NFT", t.NFT, "collection", t.Collection)
-	default:
-		return fmt.Errorf("unsupported tx type %v", t)
-	}
-
-	return nil
-}
-
 func (bc *Blockchain) GetBlockByHash(hash common.Hash) (*types.Block, error) {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
@@ -153,10 +130,10 @@ func (bc *Blockchain) GetBlockByHash(hash common.Hash) (*types.Block, error) {
 }
 
 func (bc *Blockchain) GetBlock(height uint32) (*types.Block, error) {
-	if height > bc.Height() {
+	if int32(height) > bc.Height() {
 		return nil, fmt.Errorf("given height (%d) too high", height)
 	}
-
+	fmt.Println("height: ", height, "bc.height: ", bc.Height())
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
@@ -164,13 +141,13 @@ func (bc *Blockchain) GetBlock(height uint32) (*types.Block, error) {
 }
 
 func (bc *Blockchain) GetHeader(height uint32) (*types.Header, error) {
-	if height > bc.Height() {
+	if int32(height) > bc.Height() {
 		return nil, fmt.Errorf("given height (%d) too high", height)
 	}
 
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
-
+	fmt.Println("heheheee: ", height)
 	return bc.headers[height], nil
 }
 
@@ -187,19 +164,20 @@ func (bc *Blockchain) GetTxByHash(hash common.Hash) (*types.Transaction, error) 
 }
 
 func (bc *Blockchain) HasBlock(height uint32) bool {
-	return height <= bc.Height()
+	return int32(height) <= bc.Height()
 }
 
 // [0, 1, 2 ,3] => 4 len
 // [0, 1, 2 ,3] => 3 height
-func (bc *Blockchain) Height() uint32 {
+func (bc *Blockchain) Height() int32 {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
-	return uint32(len(bc.headers) - 1)
+	return int32(len(bc.headers) - 1)
 }
 
 func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
+	fmt.Println("txtx: ", tx)
 	// If we have data inside execute that data on the VM.
 	if len(tx.Data) > 0 {
 		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash(&types.TxHasher{}))
@@ -210,19 +188,8 @@ func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 		}
 	}
 
-	// If the txInner of the transaction is not nil we need to handle
-	// the native NFT implemtation.
-	if tx.TxInner != nil {
-		if err := bc.handleNativeNFT(tx); err != nil {
-			return err
-		}
-	}
-
-	// Handle the native transaction here
-	if tx.Value > 0 {
-		if err := bc.handleNativeTransfer(tx); err != nil {
-			return err
-		}
+	if err := bc.handleNativeTransfer(tx); err != nil {
+		return err
 	}
 
 	return nil

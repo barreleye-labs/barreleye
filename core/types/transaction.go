@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/gob"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"math/rand"
@@ -9,31 +8,7 @@ import (
 	"github.com/barreleye-labs/barreleye/crypto"
 )
 
-type TxType byte
-
-const (
-	TxTypeCollection TxType = iota // 0x0
-	TxTypeMint                     // 0x01
-)
-
-type CollectionTx struct {
-	Fee      int64
-	MetaData []byte
-}
-
-type MintTx struct {
-	Fee             int64
-	NFT             common.Hash
-	Collection      common.Hash
-	MetaData        []byte
-	CollectionOwner crypto.PublicKey
-	Signature       crypto.Signature
-}
-
 type Transaction struct {
-	// Only used for native NFT logic
-	TxInner any
-	// Any arbitrary data for the VM
 	Data      []byte
 	To        crypto.PublicKey
 	Value     uint64
@@ -91,9 +66,4 @@ func (tx *Transaction) Decode(dec Decoder[*Transaction]) error {
 
 func (tx *Transaction) Encode(enc Encoder[*Transaction]) error {
 	return enc.Encode(tx)
-}
-
-func init() {
-	gob.Register(CollectionTx{})
-	gob.Register(MintTx{})
 }

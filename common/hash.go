@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type Hash [32]uint8
+type Hash [32]byte
 
 func (h Hash) IsZero() bool {
 	for i := 0; i < 32; i++ {
