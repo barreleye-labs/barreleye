@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"io"
@@ -64,7 +63,6 @@ func (k PublicKey) String() string {
 
 func (k PublicKey) Address() common.Address {
 	h := sha256.Sum256(append(k.Key.X.Bytes(), k.Key.Y.Bytes()...))
-	fmt.Println("hhh: ", h)
 	return common.NewAddressFromBytes(h[len(h)-20:])
 }
 

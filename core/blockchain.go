@@ -133,7 +133,7 @@ func (bc *Blockchain) GetBlock(height uint32) (*types.Block, error) {
 	if int32(height) > bc.Height() {
 		return nil, fmt.Errorf("given height (%d) too high", height)
 	}
-	fmt.Println("height: ", height, "bc.height: ", bc.Height())
+
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
@@ -147,7 +147,7 @@ func (bc *Blockchain) GetHeader(height uint32) (*types.Header, error) {
 
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
-	fmt.Println("heheheee: ", height)
+
 	return bc.headers[height], nil
 }
 
@@ -177,10 +177,8 @@ func (bc *Blockchain) Height() int32 {
 }
 
 func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
-	fmt.Println("txtx: ", tx)
-	// If we have data inside execute that data on the VM.
 	if len(tx.Data) > 0 {
-		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash(&types.TxHasher{}))
+		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash())
 
 		vm := NewVM(tx.Data, bc.contractState)
 		if err := vm.Run(); err != nil {
@@ -217,7 +215,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	bc.headers = append(bc.headers, b.Header)
 	bc.blocks = append(bc.blocks, b)
 
-	if err := bc.WriteBlockWithHash(b.GetHash(types.BlockHasher{}), b); err != nil {
+	if err := bc.WriteBlockWithHash(b.GetHash(), b); err != nil {
 		return err
 	}
 
@@ -240,10 +238,10 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	//data, _ = bc.ReadLastBlock()
 	//fmt.Println("Lastblock::: ", data)
 
-	bc.blockStore[b.GetHash(types.BlockHasher{})] = b
+	bc.blockStore[b.GetHash()] = b
 
 	for _, tx := range b.Transactions {
-		bc.txStore[tx.GetHash(types.TxHasher{})] = tx
+		bc.txStore[tx.GetHash()] = tx
 
 		nextTxNumber := uint32(0)
 		number, err := bc.ReadLastTxNumber()
@@ -256,7 +254,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 			nextTxNumber = *number + 1
 		}
 
-		if err := bc.WriteTxWithHash(tx.GetHash(types.TxHasher{}), tx); err != nil {
+		if err := bc.WriteTxWithHash(tx.GetHash(), tx); err != nil {
 			return err
 		}
 
@@ -276,7 +274,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 
 	bc.logger.Log(
 		"msg", "🔗 add new block",
-		"hash", b.GetHash(types.BlockHasher{}),
+		"hash", b.GetHash(),
 		"height", b.Height,
 		"transactions", len(b.Transactions),
 	)

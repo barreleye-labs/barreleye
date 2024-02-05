@@ -16,7 +16,6 @@ func main() {
 	var nodeName string = ""
 	flag.StringVar(&nodeName, "nodeName", "", "Node name")
 	flag.Parse()
-	fmt.Println("nono: ", nodeName)
 
 	// file, _ := os.Open("config/config.json")
 	// defer file.Close()

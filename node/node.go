@@ -69,8 +69,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	aaa, _ := chain.GetHeader(0)
-	fmt.Println("ggggggggg: ", aaa)
+
 	txChan := make(chan *types.Transaction)
 
 	if len(opts.APIListenAddr) > 0 {
@@ -287,7 +286,6 @@ func (n *Node) processBlocksMessage(from net.Addr, data *BlocksMessage) error {
 	n.Logger.Log("msg", "📦 received BLOCKS", "from", from, "aff:", data.Blocks)
 
 	for _, block := range data.Blocks {
-		fmt.Println("recieved genenesis: ", block.Header)
 		if err := n.chain.AddBlock(block); err != nil {
 			n.Logger.Log("error", err.Error())
 			return err
@@ -349,7 +347,7 @@ func (n *Node) processBlock(b *types.Block) error {
 }
 
 func (n *Node) processTransaction(tx *types.Transaction) error {
-	hash := tx.GetHash(types.TxHasher{})
+	hash := tx.GetHash()
 
 	if n.mempool.Contains(hash) {
 		return nil
