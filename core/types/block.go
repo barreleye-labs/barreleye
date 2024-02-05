@@ -42,7 +42,7 @@ func NewBlock(h *Header, txx []*Transaction) (*Block, error) {
 		Header:       h,
 		Transactions: txx,
 	}
-	block.Hash = block.GetHash(BlockHasher{})
+	block.Hash = block.GetHash()
 	return block, nil
 }
 
@@ -51,8 +51,7 @@ func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, err
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("prevblockhashss: ", BlockHasher{}.Hash(prevHeader))
-	fmt.Println("prevheader: ", prevHeader)
+
 	header := &Header{
 		Version:       1,
 		Height:        prevHeader.Height + 1,
@@ -71,7 +70,8 @@ func (b *Block) AddTransaction(tx *Transaction) {
 }
 
 func (b *Block) Sign(privKey crypto.PrivateKey) error {
-	sig, err := privKey.Sign(BlockHasher{}.Hash(b.Header).ToSlice())
+	sig, err := privKey.Sign(b.GetHash().ToSlice())
+	//sig, err := privKey.Sign(BlockHasher{}.Hash(b.Header).ToSlice())
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,6 @@ func (b *Block) Verify() error {
 	}
 
 	if !b.Signature.Verify(b.Validator, BlockHasher{}.Hash(b.Header).ToSlice()) {
-		// if !b.Signature.Verify(b.Validator, []byte("foo")) {
 		return fmt.Errorf("block has invalid signature")
 	}
 
@@ -104,7 +103,7 @@ func (b *Block) Verify() error {
 	}
 
 	if dataHash != b.DataHash {
-		return fmt.Errorf("block (%s) has an invalid data hash", b.GetHash(BlockHasher{}))
+		return fmt.Errorf("block (%s) has an invalid data hash", b.GetHash())
 	}
 
 	return nil
@@ -118,9 +117,9 @@ func (b *Block) Encode(enc Encoder[*Block]) error {
 	return enc.Encode(b)
 }
 
-func (b *Block) GetHash(hasher Hasher[*Header]) common.Hash {
+func (b *Block) GetHash() common.Hash {
 	if b.Hash.IsZero() {
-		b.Hash = hasher.Hash(b.Header)
+		b.Hash = BlockHasher{}.Hash(b.Header)
 	}
 
 	return b.Hash

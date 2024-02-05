@@ -33,7 +33,7 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 	}
 
 	if b.Height != uint32(v.bc.Height()+1) {
-		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(types.BlockHasher{}), b.Height, v.bc.Height())
+		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(), b.Height, v.bc.Height())
 	}
 
 	prevHeader, err := v.bc.GetHeader(b.Height - 1)
@@ -42,9 +42,7 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 	}
 
 	hash := types.BlockHasher{}.Hash(prevHeader)
-	fmt.Println("myHei: ", prevHeader.Height, "recHei: ", b.Header.Height)
-	fmt.Println("b.PrevBlockHashaaa: ", b.PrevBlockHash, "mymyhah: ", hash)
-	fmt.Println("prevHeaderrrr: ", prevHeader)
+
 	if hash != b.PrevBlockHash {
 		return fmt.Errorf("the hash of the previous block (%s) is invalid", b.PrevBlockHash)
 	}

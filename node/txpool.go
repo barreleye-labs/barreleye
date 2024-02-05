@@ -26,10 +26,10 @@ func (p *TxPool) Add(tx *types.Transaction) {
 	// 프루닝
 	if p.all.Count() == p.maxLength {
 		oldest := p.all.First()
-		p.all.Remove(oldest.GetHash(types.TxHasher{}))
+		p.all.Remove(oldest.GetHash())
 	}
 
-	if !p.all.Contains(tx.GetHash(types.TxHasher{})) {
+	if !p.all.Contains(tx.GetHash()) {
 		p.all.Add(tx)
 		p.pending.Add(tx)
 	}
@@ -70,7 +70,7 @@ func (t *TxSortedMap) First() *types.Transaction {
 	defer t.lock.RUnlock()
 
 	first := t.txx.Get(0)
-	return t.lookup[first.GetHash(types.TxHasher{})]
+	return t.lookup[first.GetHash()]
 }
 
 func (t *TxSortedMap) Get(h common.Hash) *types.Transaction {
@@ -81,7 +81,7 @@ func (t *TxSortedMap) Get(h common.Hash) *types.Transaction {
 }
 
 func (t *TxSortedMap) Add(tx *types.Transaction) {
-	hash := tx.GetHash(types.TxHasher{})
+	hash := tx.GetHash()
 
 	t.lock.Lock()
 	defer t.lock.Unlock()

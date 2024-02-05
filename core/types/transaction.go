@@ -27,15 +27,15 @@ func NewTransaction(data []byte) *Transaction {
 	}
 }
 
-func (tx *Transaction) GetHash(hasher Hasher[*Transaction]) common.Hash {
+func (tx *Transaction) GetHash() common.Hash {
 	if tx.Hash.IsZero() {
-		tx.Hash = hasher.Hash(tx)
+		tx.Hash = TxHasher{}.Hash(tx)
 	}
 	return tx.Hash
 }
 
 func (tx *Transaction) Sign(privKey crypto.PrivateKey) error {
-	hash := tx.GetHash(TxHasher{})
+	hash := tx.GetHash()
 	sig, err := privKey.Sign(hash.ToSlice())
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (tx *Transaction) Verify() error {
 		return fmt.Errorf("transaction has no signature")
 	}
 
-	hash := tx.GetHash(TxHasher{})
+	hash := tx.GetHash()
 	if !tx.Signature.Verify(tx.From, hash.ToSlice()) {
 		return fmt.Errorf("invalid transaction signature")
 	}

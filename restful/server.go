@@ -239,11 +239,11 @@ func intoJSONBlock(block *types.Block) Block {
 	}
 
 	for i := 0; i < int(txResponse.TxCount); i++ {
-		txResponse.Hashes[i] = block.Transactions[i].GetHash(types.TxHasher{}).String()
+		txResponse.Hashes[i] = block.Transactions[i].GetHash().String()
 	}
 
 	return Block{
-		Hash:          block.GetHash(types.BlockHasher{}).String(),
+		Hash:          block.GetHash().String(),
 		Version:       block.Header.Version,
 		Height:        block.Header.Height,
 		DataHash:      block.Header.DataHash.String(),
@@ -264,11 +264,11 @@ func intoJSONBlocks(blocks []*types.Block) []Block {
 		}
 
 		for j := 0; j < int(txResponse.TxCount); j++ {
-			txResponse.Hashes[j] = blocks[i].Transactions[j].GetHash(types.TxHasher{}).String()
+			txResponse.Hashes[j] = blocks[i].Transactions[j].GetHash().String()
 		}
 
 		b := Block{
-			Hash:          blocks[i].GetHash(types.BlockHasher{}).String(),
+			Hash:          blocks[i].GetHash().String(),
 			Version:       blocks[i].Header.Version,
 			Height:        blocks[i].Header.Height,
 			DataHash:      blocks[i].Header.DataHash.String(),
