@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"time"
 )
 
@@ -71,7 +72,6 @@ func (b *Block) AddTransaction(tx *Transaction) {
 
 func (b *Block) Sign(privKey crypto.PrivateKey) error {
 	sig, err := privKey.Sign(b.GetHash().ToSlice())
-	//sig, err := privKey.Sign(BlockHasher{}.Hash(b.Header).ToSlice())
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (b *Block) Verify() error {
 		return fmt.Errorf("block has no signature")
 	}
 
-	if !b.Signature.Verify(b.Validator, BlockHasher{}.Hash(b.Header).ToSlice()) {
+	if !b.Signature.Verify(b.Validator, b.GetHash().ToSlice()) {
 		return fmt.Errorf("block has invalid signature")
 	}
 
@@ -137,4 +137,8 @@ func CalculateDataHash(txx []*Transaction) (hash common.Hash, err error) {
 	hash = sha256.Sum256(buf.Bytes())
 
 	return
+}
+
+func init() {
+	gob.Register(secp256k1.S256())
 }

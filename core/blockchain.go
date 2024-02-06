@@ -5,9 +5,9 @@ import (
 	"github.com/barreleye-labs/barreleye/barreldb"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
+	"github.com/barreleye-labs/barreleye/crypto"
 	"sync"
 
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/go-kit/log"
 )
 
@@ -33,8 +33,8 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 	// TODO: read this from disk later on
 	accountState := NewAccountState()
 
-	//coinbase := privateKey.PublicKey()
-	//accountState.CreateAccount(coinbase.Address())
+	coinbase := privateKey.PublicKey()
+	accountState.CreateAccount(coinbase.Address())
 
 	db, _ := barreldb.New()
 

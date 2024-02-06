@@ -57,7 +57,7 @@ type PublicKey struct {
 	Key *ecdsa.PublicKey
 }
 
-func (k PublicKey) String() string {
+func (k PublicKey) String1() string {
 	return "tempPublicKeyString"
 }
 

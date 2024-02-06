@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type Address [20]uint8
+type Address [20]byte
 
 func (a Address) ToSlice() []byte {
 	b := make([]byte, 20)
