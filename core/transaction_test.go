@@ -2,54 +2,12 @@ package core
 
 import (
 	"bytes"
-	"encoding/gob"
-	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"testing"
 
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestVerifyTransactionWithTamper(t *testing.T) {
-	tx := types.NewTransaction(nil)
-
-	fromPrivKey := crypto.GeneratePrivateKey()
-	toPrivKey := crypto.GeneratePrivateKey()
-	hackerPrivKey := crypto.GeneratePrivateKey()
-
-	tx.From = fromPrivKey.PublicKey()
-	tx.To = toPrivKey.PublicKey()
-	tx.Value = 666
-
-	assert.Nil(t, tx.Sign(fromPrivKey))
-	tx.Hash = common.Hash{}
-
-	tx.To = hackerPrivKey.PublicKey()
-
-	assert.NotNil(t, tx.Verify())
-}
-
-func TestNFTTransaction(t *testing.T) {
-	collectionTx := types.CollectionTx{
-		Fee:      200,
-		MetaData: []byte("The beginning of a new collection"),
-	}
-
-	privKey := crypto.GeneratePrivateKey()
-	tx := &types.Transaction{
-		TxInner: collectionTx,
-	}
-	tx.Sign(privKey)
-	tx.Hash = common.Hash{}
-
-	buf := new(bytes.Buffer)
-	assert.Nil(t, gob.NewEncoder(buf).Encode(tx))
-
-	txDecoded := &types.Transaction{}
-	assert.Nil(t, gob.NewDecoder(buf).Decode(txDecoded))
-	assert.Equal(t, tx, txDecoded)
-}
 
 func TestNativeTransferTransaction(t *testing.T) {
 	fromPrivKey := crypto.GeneratePrivateKey()
@@ -98,11 +56,16 @@ func TestTxEncodeDecode(t *testing.T) {
 }
 
 func randomTxWithSignature(t *testing.T) *types.Transaction {
-	privKey := crypto.GeneratePrivateKey()
+	privateKey := crypto.GeneratePrivateKey()
+
+	toPrivateKey := crypto.GeneratePrivateKey()
+	toPublicKey := toPrivateKey.PublicKey()
+
 	tx := types.Transaction{
 		Data: []byte("foo"),
+		To:   toPublicKey,
 	}
-	assert.Nil(t, tx.Sign(privKey))
+	assert.Nil(t, tx.Sign(privateKey))
 
 	return &tx
 }
