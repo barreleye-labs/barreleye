@@ -16,11 +16,11 @@ type BlockHasher struct{}
 func (BlockHasher) Hash(header *Header) common.Hash {
 	buf := new(bytes.Buffer)
 
-	binary.Write(buf, binary.LittleEndian, header.Version)
-	binary.Write(buf, binary.LittleEndian, header.DataHash)
-	binary.Write(buf, binary.LittleEndian, header.PrevBlockHash)
-	binary.Write(buf, binary.LittleEndian, header.Height)
-	binary.Write(buf, binary.LittleEndian, header.Timestamp)
+	_ = binary.Write(buf, binary.LittleEndian, header.Version)
+	_ = binary.Write(buf, binary.LittleEndian, header.DataHash)
+	_ = binary.Write(buf, binary.LittleEndian, header.PrevBlockHash)
+	_ = binary.Write(buf, binary.LittleEndian, header.Height)
+	_ = binary.Write(buf, binary.LittleEndian, header.Timestamp)
 
 	return sha256.Sum256(buf.Bytes())
 }
@@ -31,11 +31,12 @@ type TxHasher struct{}
 func (TxHasher) Hash(tx *Transaction) common.Hash {
 	buf := new(bytes.Buffer)
 
-	binary.Write(buf, binary.LittleEndian, tx.Data)
-	binary.Write(buf, binary.LittleEndian, tx.To)
-	binary.Write(buf, binary.LittleEndian, tx.Value)
-	binary.Write(buf, binary.LittleEndian, tx.From)
-	binary.Write(buf, binary.LittleEndian, tx.Nonce)
+	_ = binary.Write(buf, binary.LittleEndian, tx.Nonce)
+	_ = binary.Write(buf, binary.LittleEndian, tx.From)
+	_ = binary.Write(buf, binary.LittleEndian, tx.To)
+	_ = binary.Write(buf, binary.LittleEndian, tx.Value)
+	_ = binary.Write(buf, binary.LittleEndian, tx.Data)
+	_ = binary.Write(buf, binary.LittleEndian, tx.Signer)
 
 	return sha256.Sum256(buf.Bytes())
 }
