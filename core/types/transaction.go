@@ -9,7 +9,7 @@ import (
 )
 
 type Transaction struct {
-	Nonce     int64
+	Nonce     uint64
 	From      common.Address
 	To        common.Address
 	Value     uint64
@@ -23,7 +23,7 @@ type Transaction struct {
 func NewTransaction(data []byte) *Transaction {
 	return &Transaction{
 		Data:  data,
-		Nonce: rand.Int63n(1000000000000000),
+		Nonce: rand.Uint64(),
 	}
 }
 

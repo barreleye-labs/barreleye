@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
+	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/common/util"
+	"log"
 )
 
 type Hasher[T any] interface {
@@ -29,14 +33,33 @@ type TxHasher struct{}
 
 // Hash will hash the whole bytes of the TX no exception.
 func (TxHasher) Hash(tx *Transaction) common.Hash {
+	nonce := util.Uint64ToBytes(tx.Nonce)
+	from := tx.From.ToSlice()
+	to := tx.To.ToSlice()
+	value := util.Uint64ToBytes(tx.Value)
+	data := tx.Data
+	x := tx.Signer.Key.X.Bytes()
+	y := tx.Signer.Key.Y.Bytes()
+
 	buf := new(bytes.Buffer)
+	_ = binary.Write(buf, binary.LittleEndian, nonce)
+	_ = binary.Write(buf, binary.LittleEndian, from)
+	_ = binary.Write(buf, binary.LittleEndian, to)
+	_ = binary.Write(buf, binary.LittleEndian, value)
+	_ = binary.Write(buf, binary.LittleEndian, data)
+	_ = binary.Write(buf, binary.LittleEndian, x)
+	_ = binary.Write(buf, binary.LittleEndian, y)
 
-	_ = binary.Write(buf, binary.LittleEndian, tx.Nonce)
-	_ = binary.Write(buf, binary.LittleEndian, tx.From)
-	_ = binary.Write(buf, binary.LittleEndian, tx.To)
-	_ = binary.Write(buf, binary.LittleEndian, tx.Value)
-	_ = binary.Write(buf, binary.LittleEndian, tx.Data)
-	_ = binary.Write(buf, binary.LittleEndian, tx.Signer)
+	msgHash := fmt.Sprintf(
+		"%x",
+		sha256.Sum256([]byte(hex.EncodeToString(buf.Bytes()))),
+	)
 
-	return sha256.Sum256(buf.Bytes())
+	message, hashDecodeError := hex.DecodeString(msgHash)
+	if hashDecodeError != nil {
+		log.Println(hashDecodeError)
+		panic("internal server error")
+	}
+
+	return common.HashFromBytes(message)
 }

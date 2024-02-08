@@ -25,22 +25,22 @@ func TestKeypairSignVerifySuccess(t *testing.T) {
 
 func TestKeypairSignVerifySuccess3(t *testing.T) {
 	xVal := new(big.Int)
-	xVal.SetString("77285c4c273f3139c875b875b83e99b37fb1b0d9f82026361ef2278972fffc35", 16)
+	xVal.SetString("aef1d4e3fefd16fe21462e7c50bb2ee93256d7a0ca349e20b03ced22c342f122", 16)
 	yVal := new(big.Int)
-	yVal.SetString("afb7806f1da92df2d2c3626dcc74daaa108016a409e3f6adceb34cdc0dd522f1", 16)
+	yVal.SetString("561b43dcf616dc92d9e5415b3ccab15edae5f1ea40da920f94a49467d82b7104", 16)
 
 	rVal := new(big.Int)
-	rVal.SetString("25a4cc9d2176c973dbbbc87e3de512735f85c7bfc88913b8d076bab7abf2b721", 16)
+	rVal.SetString("22bf1ed4aab5e9a3dec5d4906770b9e063767d59928fdb6474cf234f400a30a8", 16)
 	sVal := new(big.Int)
-	sVal.SetString("1f67d8aa3bd0ac77ad02bada5609489a2161b6d6c82e606728e4aa19760746b6", 16)
+	sVal.SetString("6b35ece1e5d5378a9debff02232009b9487ecbb7aadd5d62a98f4aa6ad7c2f3", 16)
 
 	msgHash := fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte("hello")),
 	)
+	fmt.Println("aaaaa: ", []byte("033ad840087368c8cb21dde49cb8210f1898487a3d060b26e884190789537aab"))
 
 	message, hashDecodeError := hex.DecodeString(msgHash)
-
 	if hashDecodeError != nil {
 		log.Println(hashDecodeError)
 		panic("internal server error")
@@ -60,6 +60,47 @@ func TestKeypairSignVerifySuccess3(t *testing.T) {
 		S: sVal,
 		R: rVal,
 	}
+
+	assert.True(t, signature.Verify(publicKey, message))
+}
+
+func TestKeypairSignVerifySuccess4(t *testing.T) {
+	xVal := new(big.Int)
+	xVal.SetString("ee5f14a3558a740f7da4f87569a94d31e6d889a7f23ab3c497275eddde93364d", 16)
+	yVal := new(big.Int)
+	yVal.SetString("7dc7287e1f08343a9561340378082e9fb5f07652cc408065943cf5018aaf4998", 16)
+
+	rVal := new(big.Int)
+	rVal.SetString("f86e6837e7177c202b00faf35e731e4c8d65baa75c934bc89bad107d1f959f5f", 16)
+	sVal := new(big.Int)
+	sVal.SetString("14157ddeed9998c4cacbdfeb6938f681b9df97f9ae639def5869e43060b94815", 16)
+
+	msgHash := fmt.Sprintf(
+		"%x",
+		sha256.Sum256([]byte("ab54d1b47432f5d8bfe6f747611470476225b597031e6be996ac95dc6ccbb9a119fbbc0f3eb2a449fcababee5f14a3558a740f7da4f87569a94d31e6d889a7f23ab3c497275eddde93364d7dc7287e1f08343a9561340378082e9fb5f07652cc408065943cf5018aaf4998")),
+	)
+
+	message, hashDecodeError := hex.DecodeString(msgHash)
+	if hashDecodeError != nil {
+		log.Println(hashDecodeError)
+		panic("internal server error")
+	}
+
+	ecdsaPublicKey := ecdsa.PublicKey{
+		Curve: secp256k1.S256(),
+		X:     xVal,
+		Y:     yVal,
+	}
+
+	publicKey := PublicKey{
+		Key: &ecdsaPublicKey,
+	}
+
+	signature := Signature{
+		S: sVal,
+		R: rVal,
+	}
+
 	assert.True(t, signature.Verify(publicKey, message))
 }
 

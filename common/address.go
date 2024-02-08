@@ -34,5 +34,5 @@ func NewAddressFromBytes(b []byte) Address {
 		value[i] = b[i]
 	}
 
-	return Address(value)
+	return value
 }

@@ -1,7 +1,6 @@
 package node
 
 import (
-	"github.com/barreleye-labs/barreleye/common/util"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"testing"
 
@@ -10,13 +9,13 @@ import (
 
 func TestTxMaxLength(t *testing.T) {
 	p := NewTxPool(1)
-	p.Add(util.NewRandomTransaction(10))
+	p.Add(types.NewRandomTransaction(10))
 	assert.Equal(t, 1, p.all.Count())
 
-	p.Add(util.NewRandomTransaction(10))
-	p.Add(util.NewRandomTransaction(10))
-	p.Add(util.NewRandomTransaction(10))
-	tx := util.NewRandomTransaction(100)
+	p.Add(types.NewRandomTransaction(10))
+	p.Add(types.NewRandomTransaction(10))
+	p.Add(types.NewRandomTransaction(10))
+	tx := types.NewRandomTransaction(100)
 	p.Add(tx)
 	assert.Equal(t, 1, p.all.Count())
 	assert.True(t, p.Contains(tx.GetHash()))
@@ -27,7 +26,7 @@ func TestTxPoolAdd(t *testing.T) {
 	n := 10
 
 	for i := 1; i <= n; i++ {
-		tx := util.NewRandomTransaction(100)
+		tx := types.NewRandomTransaction(100)
 		p.Add(tx)
 		// cannot add twice
 		p.Add(tx)
@@ -45,7 +44,7 @@ func TestTxPoolMaxLength(t *testing.T) {
 	txx := []*types.Transaction{}
 
 	for i := 0; i < n; i++ {
-		tx := util.NewRandomTransaction(100)
+		tx := types.NewRandomTransaction(100)
 		p.Add(tx)
 
 		if i > n-(maxLen+1) {
@@ -63,12 +62,12 @@ func TestTxPoolMaxLength(t *testing.T) {
 
 func TestTxSortedMapFirst(t *testing.T) {
 	m := NewTxSortedMap()
-	first := util.NewRandomTransaction(100)
+	first := types.NewRandomTransaction(100)
 	m.Add(first)
-	m.Add(util.NewRandomTransaction(10))
-	m.Add(util.NewRandomTransaction(10))
-	m.Add(util.NewRandomTransaction(10))
-	m.Add(util.NewRandomTransaction(10))
+	m.Add(types.NewRandomTransaction(10))
+	m.Add(types.NewRandomTransaction(10))
+	m.Add(types.NewRandomTransaction(10))
+	m.Add(types.NewRandomTransaction(10))
 	assert.Equal(t, first, m.First())
 }
 
@@ -77,7 +76,7 @@ func TestTxSortedMapAdd(t *testing.T) {
 	n := 100
 
 	for i := 0; i < n; i++ {
-		tx := util.NewRandomTransaction(100)
+		tx := types.NewRandomTransaction(100)
 		m.Add(tx)
 		// cannot add the same twice
 		m.Add(tx)
@@ -97,7 +96,7 @@ func TestTxSortedMapAdd(t *testing.T) {
 func TestTxSortedMapRemove(t *testing.T) {
 	m := NewTxSortedMap()
 
-	tx := util.NewRandomTransaction(100)
+	tx := types.NewRandomTransaction(100)
 	m.Add(tx)
 	assert.Equal(t, m.Count(), 1)
 
