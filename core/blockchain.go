@@ -33,8 +33,8 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 	// TODO: read this from disk later on
 	accountState := NewAccountState()
 
-	coinbase := privateKey.PublicKey()
-	accountState.CreateAccount(coinbase.Address())
+	//coinbase := privateKey.PublicKey()
+	//accountState.CreateAccount(coinbase.Address())
 
 	db, _ := barreldb.New()
 
@@ -110,11 +110,11 @@ func (bc *Blockchain) AddBlock(b *types.Block) error {
 func (bc *Blockchain) handleNativeTransfer(tx *types.Transaction) error {
 	bc.logger.Log(
 		"msg", "handle native token transfer",
-		"from", tx.From,
+		"from", tx.Signer,
 		"to", tx.To,
 		"value", tx.Value)
 
-	return bc.accountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
+	return bc.accountState.Transfer(tx.Signer.Address(), tx.To, tx.Value)
 }
 
 func (bc *Blockchain) GetBlockByHash(hash common.Hash) (*types.Block, error) {

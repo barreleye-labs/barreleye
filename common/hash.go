@@ -5,7 +5,11 @@ import (
 	"fmt"
 )
 
-type Hash [32]byte
+const (
+	HashLength = 32
+)
+
+type Hash [HashLength]byte
 
 func (h Hash) IsZero() bool {
 	for i := 0; i < 32; i++ {
@@ -38,5 +42,5 @@ func HashFromBytes(b []byte) Hash {
 		value[i] = b[i]
 	}
 
-	return Hash(value)
+	return value
 }

@@ -13,7 +13,7 @@ func TestNativeTransferTransaction(t *testing.T) {
 	fromPrivKey := crypto.GeneratePrivateKey()
 	toPrivKey := crypto.GeneratePrivateKey()
 	tx := &types.Transaction{
-		To:    toPrivKey.PublicKey(),
+		To:    toPrivKey.PublicKey().Address(),
 		Value: 666,
 	}
 
@@ -40,7 +40,7 @@ func TestVerifyTransaction(t *testing.T) {
 	assert.Nil(t, tx.Verify())
 
 	otherPrivKey := crypto.GeneratePrivateKey()
-	tx.From = otherPrivKey.PublicKey()
+	tx.Signer = otherPrivKey.PublicKey()
 
 	assert.NotNil(t, tx.Verify())
 }
@@ -63,7 +63,7 @@ func randomTxWithSignature(t *testing.T) *types.Transaction {
 
 	tx := types.Transaction{
 		Data: []byte("foo"),
-		To:   toPublicKey,
+		To:   toPublicKey.Address(),
 	}
 	assert.Nil(t, tx.Sign(privateKey))
 

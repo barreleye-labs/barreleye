@@ -66,6 +66,23 @@ func (k PublicKey) Address() common.Address {
 	return common.NewAddressFromBytes(h[len(h)-20:])
 }
 
+func GetPublicKey(xHex string, yHex string) PublicKey {
+	x := new(big.Int)
+	x.SetString(xHex, 16)
+	y := new(big.Int)
+	y.SetString(yHex, 16)
+
+	ecdsaPublicKey := ecdsa.PublicKey{
+		Curve: secp256k1.S256(),
+		X:     x,
+		Y:     y,
+	}
+
+	return PublicKey{
+		Key: &ecdsaPublicKey,
+	}
+}
+
 type Signature struct {
 	S *big.Int
 	R *big.Int
@@ -78,4 +95,16 @@ func (sig Signature) String() string {
 
 func (sig Signature) Verify(publicKey PublicKey, data []byte) bool {
 	return ecdsa.Verify(publicKey.Key, data, sig.R, sig.S)
+}
+
+func GetSignature(rHex string, sHex string) Signature {
+	r := new(big.Int)
+	r.SetString(rHex, 16)
+	s := new(big.Int)
+	s.SetString(sHex, 16)
+
+	return Signature{
+		R: r,
+		S: s,
+	}
 }

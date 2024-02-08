@@ -473,8 +473,8 @@ func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 
 	coinbase := privateKey.PublicKey()
 	tx := types.NewTransaction(nil)
-	tx.From = coinbase
-	tx.To = coinbase
+	tx.Signer = coinbase
+	tx.To = coinbase.Address()
 	tx.Value = 10_000_000
 	b.Transactions = append(b.Transactions, tx)
 

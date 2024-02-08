@@ -1,11 +1,13 @@
 package restful
 
 import (
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
+	"github.com/barreleye-labs/barreleye/crypto"
+	"github.com/barreleye-labs/barreleye/restful/dto"
+	"math/big"
 	"net/http"
 	"strconv"
 
@@ -65,7 +67,7 @@ func (s *Server) Start() error {
 	e.GET("txs/:id", s.handleGetTx)
 	e.GET("txs", s.handleGetTxs)
 	//e.GET("/tx/:hash", s.handleGetTx)
-	e.POST("/tx", s.handlePostTx)
+	e.POST("/txs", s.handlePostTx)
 
 	return e.Start(s.ListenAddr)
 }
@@ -91,12 +93,9 @@ func (s *Server) handleGetTxs(c echo.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to convert size type from string to int")
 	}
-	fmt.Println("111111")
 	txs, err := s.bc.ReadTxs(page, size)
-	fmt.Println("222222")
 	if err != nil {
 
-		fmt.Println("33333", err)
 		return fmt.Errorf("failed to get txs %s", err)
 	}
 
@@ -147,11 +146,49 @@ func (s *Server) handleGetBlocks(c echo.Context) error {
 //}
 
 func (s *Server) handlePostTx(c echo.Context) error {
-	tx := &types.Transaction{}
-	if err := gob.NewDecoder(c.Request().Body).Decode(tx); err != nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	payload := &dto.TransactionRequest{}
+	if err := c.Bind(payload); err != nil {
+		return c.String(http.StatusBadRequest, "bad request")
 	}
-	s.txChan <- tx
+
+	signer := crypto.GetPublicKey(payload.SignerX, payload.SignerY)
+	signature := crypto.GetSignature(payload.SignatureR, payload.SignatureS)
+
+	nonceBigInt := new(big.Int)
+	nonceBigInt.SetString(payload.Nonce, 16)
+	nonce := nonceBigInt.Uint64()
+
+	from, err := hex.DecodeString(payload.From)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "invalid property from")
+	}
+
+	to, err := hex.DecodeString(payload.To)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "invalid property to")
+	}
+
+	valueBigInt := new(big.Int)
+	valueBigInt.SetString(payload.Value, 16)
+	value := valueBigInt.Uint64()
+
+	data, err := hex.DecodeString(payload.Data)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "invalid property data")
+	}
+
+	tx := types.Transaction{
+		Nonce:     nonce,
+		From:      common.NewAddressFromBytes(from),
+		To:        common.NewAddressFromBytes(to),
+		Value:     value,
+		Data:      data,
+		Signer:    signer,
+		Signature: &signature,
+	}
+	tx.Hash = tx.GetHash()
+
+	s.txChan <- &tx
 
 	return nil
 }

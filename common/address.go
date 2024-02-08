@@ -5,7 +5,11 @@ import (
 	"fmt"
 )
 
-type Address [20]byte
+const (
+	AddressLength = 20
+)
+
+type Address [AddressLength]byte
 
 func (a Address) ToSlice() []byte {
 	b := make([]byte, 20)
@@ -30,5 +34,5 @@ func NewAddressFromBytes(b []byte) Address {
 		value[i] = b[i]
 	}
 
-	return Address(value)
+	return value
 }

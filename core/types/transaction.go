@@ -9,21 +9,21 @@ import (
 )
 
 type Transaction struct {
-	Data      []byte
-	To        crypto.PublicKey
+	Nonce     uint64
+	From      common.Address
+	To        common.Address
 	Value     uint64
-	From      crypto.PublicKey
+	Data      []byte
+	Signer    crypto.PublicKey
 	Signature *crypto.Signature
-	Nonce     int64
 
-	// cached version of the tx data hash
 	Hash common.Hash
 }
 
 func NewTransaction(data []byte) *Transaction {
 	return &Transaction{
 		Data:  data,
-		Nonce: rand.Int63n(1000000000000000),
+		Nonce: rand.Uint64(),
 	}
 }
 
@@ -34,14 +34,14 @@ func (tx *Transaction) GetHash() common.Hash {
 	return tx.Hash
 }
 
-func (tx *Transaction) Sign(privKey crypto.PrivateKey) error {
+func (tx *Transaction) Sign(privateKey crypto.PrivateKey) error {
 	hash := tx.GetHash()
-	sig, err := privKey.Sign(hash.ToSlice())
+	sig, err := privateKey.Sign(hash.ToSlice())
 	if err != nil {
 		return err
 	}
 
-	tx.From = privKey.PublicKey()
+	tx.Signer = privateKey.PublicKey()
 	tx.Signature = sig
 
 	return nil
@@ -53,7 +53,7 @@ func (tx *Transaction) Verify() error {
 	}
 
 	hash := tx.GetHash()
-	if !tx.Signature.Verify(tx.From, hash.ToSlice()) {
+	if !tx.Signature.Verify(tx.Signer, hash.ToSlice()) {
 		return fmt.Errorf("invalid transaction signature")
 	}
 
