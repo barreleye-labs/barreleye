@@ -2,7 +2,9 @@ package barreldb
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"strconv"
@@ -45,7 +47,9 @@ func (barrelDB *BarrelDatabase) InsertLastTx(tx *types.Transaction) error {
 }
 
 func (barrelDB *BarrelDatabase) InsertLastTxNumber(number uint32) error {
-	if err := barrelDB.GetTable("lastTxNumber").Put([]byte{}, []byte(strconv.Itoa(int(number)))); err != nil {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, number)
+	if err := barrelDB.GetTable("lastTxNumber").Put([]byte{}, b); err != nil {
 		return err
 	}
 	return nil
@@ -99,6 +103,8 @@ func (barrelDB *BarrelDatabase) SelectLastTx() (*types.Transaction, error) {
 func (barrelDB *BarrelDatabase) SelectLastTxNumber() (*uint32, error) {
 	data, err := barrelDB.GetTable("lastTxNumber").Get([]byte{})
 	if err != nil {
+
+		fmt.Println("jijiji: ", err)
 		return nil, err
 	}
 

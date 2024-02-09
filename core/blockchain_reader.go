@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 )
@@ -97,10 +98,11 @@ func (bc *Blockchain) ReadTxByNumber(number uint32) (*types.Transaction, error) 
 }
 
 func (bc *Blockchain) ReadTxs(page int, size int) ([]*types.Transaction, error) {
-
+	fmt.Println("fefefefe")
 	offset := (page - 1) * size
 
 	lastTxNumber, err := bc.ReadLastTxNumber()
+	fmt.Println("lastTxNumber: ", *lastTxNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +142,7 @@ func (bc *Blockchain) ReadLastTx() (*types.Transaction, error) {
 func (bc *Blockchain) ReadLastTxNumber() (*uint32, error) {
 	number, err := bc.db.SelectLastTxNumber()
 	if err != nil {
+		fmt.Println("efjiowferrrrr:", err)
 		return nil, err
 	}
 

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/common/util"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/restful/dto"
@@ -93,13 +94,40 @@ func (s *Server) handleGetTxs(c echo.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to convert size type from string to int")
 	}
-	txs, err := s.bc.ReadTxs(page, size)
+
+	result, err := s.bc.ReadTxs(page, size)
 	if err != nil {
 
 		return fmt.Errorf("failed to get txs %s", err)
 	}
 
-	return c.JSON(http.StatusOK, txs)
+	txs := []dto.Transaction{}
+	for i := 0; i < len(result); i++ {
+		signer := dto.Signer{
+			X: hex.EncodeToString(result[i].Signer.Key.X.Bytes()),
+			Y: hex.EncodeToString(result[i].Signer.Key.Y.Bytes()),
+		}
+
+		signature := dto.Signature{
+			R: hex.EncodeToString(result[i].Signature.R.Bytes()),
+			S: hex.EncodeToString(result[i].Signature.S.Bytes()),
+		}
+
+		tx := dto.Transaction{
+			Hash:      result[i].Hash.String(),
+			Nonce:     hex.EncodeToString(util.Uint64ToBytes(result[i].Nonce)),
+			From:      result[i].From.String(),
+			To:        result[i].To.String(),
+			Value:     hex.EncodeToString(util.Uint64ToBytes(result[i].Value)),
+			Data:      hex.EncodeToString(result[i].Data),
+			Signer:    signer,
+			Signature: signature,
+		}
+
+		txs = append(txs, tx)
+	}
+
+	return c.JSON(http.StatusOK, dto.TransactionsResponse{Transactions: txs})
 }
 
 func (s *Server) handleGetBlocks(c echo.Context) error {
@@ -212,31 +240,48 @@ func (s *Server) handlePostTx(c echo.Context) error {
 func (s *Server) handleGetTx(c echo.Context) error {
 	id := c.Param("id")
 
+	var result *types.Transaction = nil
+
 	number, err := strconv.Atoi(id)
-	// If the error is nil we can assume the height of the block is given.
 	if err == nil {
-		tx, err := s.bc.ReadTxByNumber(uint32(number))
+		result, err = s.bc.ReadTxByNumber(uint32(number))
 		if err != nil {
-			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
 		}
+	} else {
+		hash, err := hex.DecodeString(id)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+		}
 
-		return c.JSON(http.StatusOK, tx)
+		result, err = s.bc.ReadTxByHash(common.HashFromBytes(hash))
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+		}
 	}
 
-	// otherwise assume its the hash
-
-	hash, err := hex.DecodeString(id)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	signer := dto.Signer{
+		X: hex.EncodeToString(result.Signer.Key.X.Bytes()),
+		Y: hex.EncodeToString(result.Signer.Key.Y.Bytes()),
 	}
 
-	tx, err := s.bc.ReadTxByHash(common.HashFromBytes(hash))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	signature := dto.Signature{
+		R: hex.EncodeToString(result.Signature.R.Bytes()),
+		S: hex.EncodeToString(result.Signature.S.Bytes()),
 	}
 
-	return c.JSON(http.StatusOK, tx)
+	tx := dto.Transaction{
+		Hash:      result.Hash.String(),
+		Nonce:     hex.EncodeToString(util.Uint64ToBytes(result.Nonce)),
+		From:      result.From.String(),
+		To:        result.To.String(),
+		Value:     hex.EncodeToString(util.Uint64ToBytes(result.Value)),
+		Data:      hex.EncodeToString(result.Data),
+		Signer:    signer,
+		Signature: signature,
+	}
+
+	return c.JSON(http.StatusOK, dto.TransactionResponse{Transaction: tx})
 }
 
 func (s *Server) handleGetBlock(c echo.Context) error {
