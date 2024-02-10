@@ -29,15 +29,6 @@ type Blockchain struct {
 }
 
 func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.Block) (*Blockchain, error) {
-	// We should create all states inside the scope of the newblockchain.
-	// TODO: read this from disk later on
-	accountState := NewAccountState()
-
-	if privateKey != nil {
-		coinbase := privateKey.PublicKey()
-		accountState.CreateAccount(coinbase.Address())
-	}
-
 	db, _ := barreldb.New()
 
 	/*
@@ -76,6 +67,18 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 	err = db.CreateTable(barreldb.LastTxNumberTableName, barreldb.LastTxNumberPrefix)
 	if err != nil {
 		return nil, err
+	}
+
+	err = db.CreateTable(barreldb.AddressAccountTableName, barreldb.AddressAccountPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	accountState := NewAccountState()
+
+	if privateKey != nil {
+		coinbase := privateKey.PublicKey()
+		accountState.CreateAccount(coinbase.Address())
 	}
 
 	bc := &Blockchain{
@@ -220,11 +223,9 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	if err := bc.WriteBlockWithHash(b.GetHash(), b); err != nil {
 		return err
 	}
-
 	if err := bc.WriteBlockWithHeight(b.Height, b); err != nil {
 		return err
 	}
-
 	if err := bc.WriteLastBlock(b); err != nil {
 		return err
 	}
@@ -259,15 +260,12 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 		if err := bc.WriteTxWithHash(tx.GetHash(), tx); err != nil {
 			return err
 		}
-
 		if err := bc.WriteTxWithNumber(nextTxNumber, tx); err != nil {
 			return err
 		}
-
 		if err := bc.WriteLastTx(tx); err != nil {
 			return err
 		}
-
 		if err := bc.WriteLastTxNumber(nextTxNumber); err != nil {
 			return err
 		}

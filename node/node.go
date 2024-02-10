@@ -62,7 +62,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 
 	var genesis *types.Block = nil
 	if opts.PrivateKey != nil {
-		genesis = genesisBlock(opts.PrivateKey)
+		genesis = CreateGenesisBlock(opts.PrivateKey)
 	}
 
 	chain, err := core.NewBlockchain(opts.Logger, opts.PrivateKey, genesis)
@@ -462,7 +462,7 @@ func (n *Node) createNewBlock() error {
 	return nil
 }
 
-func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
+func CreateGenesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	header := &types.Header{
 		Version:   1,
 		DataHash:  common.Hash{},
