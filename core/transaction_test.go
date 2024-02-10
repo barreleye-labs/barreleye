@@ -62,8 +62,12 @@ func randomTxWithSignature(t *testing.T) *types.Transaction {
 	toPublicKey := toPrivateKey.PublicKey()
 
 	tx := types.Transaction{
-		Data: []byte("foo"),
-		To:   toPublicKey.Address(),
+		Nonce:  171, //ab
+		From:   privateKey.PublicKey().Address(),
+		To:     toPublicKey.Address(),
+		Value:  171,         //ab
+		Data:   []byte{171}, //ab
+		Signer: privateKey.PublicKey(),
 	}
 	assert.Nil(t, tx.Sign(privateKey))
 

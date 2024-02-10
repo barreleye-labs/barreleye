@@ -18,13 +18,6 @@ type Transaction struct {
 	Hash common.Hash
 }
 
-func NewTransaction(data []byte) *Transaction {
-	return &Transaction{
-		Data:  []byte{171},
-		Nonce: 171, //ab
-	}
-}
-
 func (tx *Transaction) GetHash() common.Hash {
 	if tx.Hash.IsZero() {
 		tx.Hash = TxHasher{}.Hash(tx)

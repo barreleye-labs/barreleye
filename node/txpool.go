@@ -10,7 +10,7 @@ type TxPool struct {
 	all     *TxSortedMap
 	pending *TxSortedMap
 	// 풀 사이즈
-	// 풀이 가득차면 가장 오래된 트랜잭션부터 푸루닝할 것.
+	// 풀이 가득차면 가장 오래된 트랜잭션부터 프루닝할 것.
 	maxLength int
 }
 
