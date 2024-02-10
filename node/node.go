@@ -473,11 +473,14 @@ func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	b, _ := types.NewBlock(header, nil)
 
 	coinbase := privateKey.PublicKey()
-	tx := types.NewTransaction(nil)
-	tx.Signer = coinbase
-	tx.From = coinbase.Address()
-	tx.To = coinbase.Address()
-	tx.Value = 171 //ab
+
+	tx := &types.Transaction{
+		Nonce: 171, //ab
+		From:  coinbase.Address(),
+		To:    coinbase.Address(),
+		Value: 171, //ab
+		Data:  []byte{171},
+	}
 
 	if err := tx.Sign(*privateKey); err != nil {
 		panic(err)

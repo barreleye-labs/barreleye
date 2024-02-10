@@ -38,8 +38,6 @@ func (TxHasher) Hash(tx *Transaction) common.Hash {
 	to := tx.To.ToSlice()
 	value := util.Uint64ToBytes(tx.Value)
 	data := tx.Data
-	x := tx.Signer.Key.X.Bytes()
-	y := tx.Signer.Key.Y.Bytes()
 
 	buf := new(bytes.Buffer)
 	_ = binary.Write(buf, binary.LittleEndian, nonce)
@@ -47,8 +45,6 @@ func (TxHasher) Hash(tx *Transaction) common.Hash {
 	_ = binary.Write(buf, binary.LittleEndian, to)
 	_ = binary.Write(buf, binary.LittleEndian, value)
 	_ = binary.Write(buf, binary.LittleEndian, data)
-	_ = binary.Write(buf, binary.LittleEndian, x)
-	_ = binary.Write(buf, binary.LittleEndian, y)
 
 	msgHash := fmt.Sprintf(
 		"%x",
