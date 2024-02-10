@@ -36,7 +36,11 @@ func (s *AccountState) CreateAccount(address common.Address) *Account {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	acc := &Account{Address: address}
+	return s.CreateAccountWithoutLock(address)
+}
+
+func (s *AccountState) CreateAccountWithoutLock(address common.Address) *Account {
+	acc := &Account{Address: address, Balance: 100_000_000_000}
 	s.accounts[address] = acc
 	return acc
 }
@@ -51,7 +55,7 @@ func (s *AccountState) GetAccount(address common.Address) (*Account, error) {
 func (s *AccountState) getAccountWithoutLock(address common.Address) (*Account, error) {
 	account, ok := s.accounts[address]
 	if !ok {
-		return nil, ErrAccountNotFound
+		return s.CreateAccountWithoutLock(address), nil
 	}
 
 	return account, nil

@@ -157,6 +157,7 @@ free:
 			n.Logger.Log("msg", "🙋 peer added to the Node", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
 
 		case tx := <-n.txChan:
+			fmt.Println("aaaaaaa: ", tx)
 			if err := n.processTransaction(tx); err != nil {
 				n.Logger.Log("process TX error", err)
 			}
@@ -474,12 +475,16 @@ func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	coinbase := privateKey.PublicKey()
 	tx := types.NewTransaction(nil)
 	tx.Signer = coinbase
+	tx.From = coinbase.Address()
 	tx.To = coinbase.Address()
-	tx.Value = 10_000_000
+	tx.Value = 171 //ab
+
+	if err := tx.Sign(*privateKey); err != nil {
+		panic(err)
+	}
 	b.Transactions = append(b.Transactions, tx)
 
-	privKey := crypto.GeneratePrivateKey()
-	if err := b.Sign(privKey); err != nil {
+	if err := b.Sign(*privateKey); err != nil {
 		panic(err)
 	}
 

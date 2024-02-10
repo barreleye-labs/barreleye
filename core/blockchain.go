@@ -33,8 +33,10 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 	// TODO: read this from disk later on
 	accountState := NewAccountState()
 
-	//coinbase := privateKey.PublicKey()
-	//accountState.CreateAccount(coinbase.Address())
+	if privateKey != nil {
+		coinbase := privateKey.PublicKey()
+		accountState.CreateAccount(coinbase.Address())
+	}
 
 	db, _ := barreldb.New()
 

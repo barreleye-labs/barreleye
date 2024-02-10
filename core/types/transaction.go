@@ -3,8 +3,6 @@ package types
 import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
-	"math/rand"
-
 	"github.com/barreleye-labs/barreleye/crypto"
 )
 
@@ -22,8 +20,8 @@ type Transaction struct {
 
 func NewTransaction(data []byte) *Transaction {
 	return &Transaction{
-		Data:  data,
-		Nonce: rand.Uint64(),
+		Data:  []byte{171},
+		Nonce: 171, //ab
 	}
 }
 
