@@ -76,11 +76,6 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 
 	accountState := NewAccountState()
 
-	if privateKey != nil {
-		coinbase := privateKey.PublicKey()
-		accountState.CreateAccount(coinbase.Address())
-	}
-
 	bc := &Blockchain{
 		contractState: NewState(),
 		headers:       []*types.Header{},
@@ -93,11 +88,25 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 	}
 	bc.validator = NewBlockValidator(bc)
 
-	if genesis != nil {
-		err = bc.addBlockWithoutValidation(genesis)
+	if privateKey != nil {
+		coinbase := privateKey.PublicKey()
+		accountState.CreateAccount(coinbase.Address())
+
+		coinbaseAccount := types.CreateAccount(coinbase.Address())
+		_, err = bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return bc, err
+	if genesis != nil {
+		err = bc.addBlockWithoutValidation(genesis)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return bc, nil
 }
 
 func (bc *Blockchain) SetValidator(v Validator) {
@@ -195,6 +204,9 @@ func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 		return err
 	}
 
+	if err := bc.Transfer(tx.From, tx.To, tx.Value); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -101,8 +101,6 @@ func NewNode(opts NodeOpts) (*Node, error) {
 
 	s.TCPTransport.peerCh = peerCh
 
-	// If we dont got any processor from the Node options, we going to use
-	// the Node as default.
 	if s.RPCProcessor == nil {
 		s.RPCProcessor = s
 	}
@@ -157,7 +155,6 @@ free:
 			n.Logger.Log("msg", "🙋 peer added to the Node", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
 
 		case tx := <-n.txChan:
-			fmt.Println("aaaaaaa: ", tx)
 			if err := n.processTransaction(tx); err != nil {
 				n.Logger.Log("process TX error", err)
 			}
@@ -373,7 +370,7 @@ func (n *Node) processTransaction(tx *types.Transaction) error {
 
 // 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
 func (n *Node) requestBlocksLoop(peer net.Addr) error {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 
 	for {
 		ourHeight := n.chain.Height()
