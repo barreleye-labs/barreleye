@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"strconv"
@@ -16,7 +15,7 @@ func (barrelDB *BarrelDatabase) InsertTxWithHash(hash common.Hash, tx *types.Tra
 		return err
 	}
 
-	if err := barrelDB.GetTable("hash-tx").Put(hash.ToSlice(), buf.Bytes()); err != nil {
+	if err := barrelDB.GetTable(HashTxTableName).Put(hash.ToSlice(), buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
@@ -28,7 +27,7 @@ func (barrelDB *BarrelDatabase) InsertTxWithNumber(number uint32, tx *types.Tran
 		return err
 	}
 
-	if err := barrelDB.GetTable("number-tx").Put([]byte(strconv.Itoa(int(number))), buf.Bytes()); err != nil {
+	if err := barrelDB.GetTable(NumberTxTableName).Put([]byte(strconv.Itoa(int(number))), buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
@@ -40,7 +39,7 @@ func (barrelDB *BarrelDatabase) InsertLastTx(tx *types.Transaction) error {
 		return err
 	}
 
-	if err := barrelDB.GetTable("lastTx").Put([]byte{}, buf.Bytes()); err != nil {
+	if err := barrelDB.GetTable(LastTxTableName).Put([]byte{}, buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
@@ -49,14 +48,14 @@ func (barrelDB *BarrelDatabase) InsertLastTx(tx *types.Transaction) error {
 func (barrelDB *BarrelDatabase) InsertLastTxNumber(number uint32) error {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, number)
-	if err := barrelDB.GetTable("lastTxNumber").Put([]byte{}, b); err != nil {
+	if err := barrelDB.GetTable(LastTxNumberTableName).Put([]byte{}, b); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (barrelDB *BarrelDatabase) SelectTxByHash(hash common.Hash) (*types.Transaction, error) {
-	data, err := barrelDB.GetTable("hash-tx").Get(hash.ToSlice())
+	data, err := barrelDB.GetTable(HashTxTableName).Get(hash.ToSlice())
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +70,7 @@ func (barrelDB *BarrelDatabase) SelectTxByHash(hash common.Hash) (*types.Transac
 }
 
 func (barrelDB *BarrelDatabase) SelectTxByNumber(number uint32) (*types.Transaction, error) {
-	data, err := barrelDB.GetTable("number-tx").Get([]byte(strconv.Itoa(int(number))))
+	data, err := barrelDB.GetTable(NumberTxTableName).Get([]byte(strconv.Itoa(int(number))))
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +85,7 @@ func (barrelDB *BarrelDatabase) SelectTxByNumber(number uint32) (*types.Transact
 }
 
 func (barrelDB *BarrelDatabase) SelectLastTx() (*types.Transaction, error) {
-	data, err := barrelDB.GetTable("lastTx").Get([]byte{})
+	data, err := barrelDB.GetTable(LastTxTableName).Get([]byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -101,10 +100,8 @@ func (barrelDB *BarrelDatabase) SelectLastTx() (*types.Transaction, error) {
 }
 
 func (barrelDB *BarrelDatabase) SelectLastTxNumber() (*uint32, error) {
-	data, err := barrelDB.GetTable("lastTxNumber").Get([]byte{})
+	data, err := barrelDB.GetTable(LastTxNumberTableName).Get([]byte{})
 	if err != nil {
-
-		fmt.Println("jijiji: ", err)
 		return nil, err
 	}
 

@@ -13,7 +13,7 @@ func (barrelDB *BarrelDatabase) InsertBlockWithHash(hash common.Hash, block *typ
 		return err
 	}
 
-	if err := barrelDB.GetTable("hash-block").Put(hash.ToSlice(), buf.Bytes()); err != nil {
+	if err := barrelDB.GetTable(HashBlockTableName).Put(hash.ToSlice(), buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
@@ -25,7 +25,7 @@ func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height uint32, block *type
 		return err
 	}
 
-	if err := barrelDB.GetTable("height-block").Put([]byte(strconv.Itoa(int(height))), buf.Bytes()); err != nil {
+	if err := barrelDB.GetTable(HeightBlockTableName).Put([]byte(strconv.Itoa(int(height))), buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
@@ -37,14 +37,14 @@ func (barrelDB *BarrelDatabase) InsertLastBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := barrelDB.GetTable("lastBlock").Put([]byte{}, buf.Bytes()); err != nil {
+	if err := barrelDB.GetTable(LastBlockTableName).Put([]byte{}, buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Block, error) {
-	data, err := barrelDB.GetTable("hash-block").Get(hash.ToSlice())
+	data, err := barrelDB.GetTable(HashBlockTableName).Get(hash.ToSlice())
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Bloc
 }
 
 func (barrelDB *BarrelDatabase) SelectBlockByHeight(height uint32) (*types.Block, error) {
-	data, err := barrelDB.GetTable("height-block").Get([]byte(strconv.Itoa(int(height))))
+	data, err := barrelDB.GetTable(HeightBlockTableName).Get([]byte(strconv.Itoa(int(height))))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (barrelDB *BarrelDatabase) SelectBlockByHeight(height uint32) (*types.Block
 }
 
 func (barrelDB *BarrelDatabase) SelectLastBlock() (*types.Block, error) {
-	data, err := barrelDB.GetTable("lastBlock").Get([]byte{})
+	data, err := barrelDB.GetTable(LastBlockTableName).Get([]byte{})
 	if err != nil {
 		return nil, err
 	}

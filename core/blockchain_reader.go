@@ -142,7 +142,6 @@ func (bc *Blockchain) ReadLastTx() (*types.Transaction, error) {
 func (bc *Blockchain) ReadLastTxNumber() (*uint32, error) {
 	number, err := bc.db.SelectLastTxNumber()
 	if err != nil {
-		fmt.Println("efjiowferrrrr:", err)
 		return nil, err
 	}
 

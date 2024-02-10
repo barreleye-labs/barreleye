@@ -482,7 +482,6 @@ func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	if err := tx.Sign(*privateKey); err != nil {
 		panic(err)
 	}
-	fmt.Println("genesisTx: ", tx)
 	b.Transactions = append(b.Transactions, tx)
 
 	if err := b.Sign(*privateKey); err != nil {
