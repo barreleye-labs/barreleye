@@ -53,3 +53,45 @@ func (bc *Blockchain) WriteLastTxNumber(number uint32) error {
 	}
 	return nil
 }
+
+func (bc *Blockchain) WriteAccountWithAddress(address common.Address, account *types.Account) (*types.Account, error) {
+	if account == nil {
+		account = types.CreateAccount(address)
+	}
+
+	if err := bc.db.InsertAccountWithAddress(address, account); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
+	fromAccount, err := bc.ReadAccountByAddress(from)
+	if fromAccount == nil {
+		// TODO: Register account at Coin Faucet
+		fromAccount, err = bc.WriteAccountWithAddress(from, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	toAccount, err := bc.ReadAccountByAddress(to)
+	if toAccount == nil {
+		toAccount, err = bc.WriteAccountWithAddress(to, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = fromAccount.Transfer(toAccount, amount); err != nil {
+		return err
+	}
+
+	if err = bc.db.InsertAccountWithAddress(fromAccount.Address, fromAccount); err != nil {
+		return err
+	}
+	if err = bc.db.InsertAccountWithAddress(fromAccount.Address, fromAccount); err != nil {
+		return err
+	}
+	return nil
+}

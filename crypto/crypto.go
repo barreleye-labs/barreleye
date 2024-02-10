@@ -63,7 +63,7 @@ func (k PublicKey) String1() string {
 
 func (k PublicKey) Address() common.Address {
 	h := sha256.Sum256(append(k.Key.X.Bytes(), k.Key.Y.Bytes()...))
-	return common.NewAddressFromBytes(h[len(h)-20:])
+	return common.NewAddressFromBytes(h[:20])
 }
 
 func GetPublicKey(xHex string, yHex string) PublicKey {

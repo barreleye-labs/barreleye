@@ -68,3 +68,31 @@ func NewGobBlockDecoder(r io.Reader) *GobBlockDecoder {
 func (dec *GobBlockDecoder) Decode(b *Block) error {
 	return gob.NewDecoder(dec.r).Decode(b)
 }
+
+type GobAccountEncoder struct {
+	w io.Writer
+}
+
+func NewGobAccountEncoder(w io.Writer) *GobAccountEncoder {
+	return &GobAccountEncoder{
+		w: w,
+	}
+}
+
+func (enc *GobAccountEncoder) Encode(a *Account) error {
+	return gob.NewEncoder(enc.w).Encode(a)
+}
+
+type GobAccountDecoder struct {
+	r io.Reader
+}
+
+func NewGobAccountDecoder(r io.Reader) *GobAccountDecoder {
+	return &GobAccountDecoder{
+		r: r,
+	}
+}
+
+func (dec *GobAccountDecoder) Decode(a *Account) error {
+	return gob.NewDecoder(dec.r).Decode(a)
+}

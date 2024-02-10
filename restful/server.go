@@ -62,18 +62,40 @@ func (s *Server) Start() error {
 	e := echo.New()
 
 	//e.GET("/block/:hashorid", s.handleGetBlock)
-	e.GET("/blocks/:id", s.handleGetBlock)
-	e.GET("/blocks", s.handleGetBlocks)
-	e.GET("/last-block", s.handleGetLastBlock)
-	e.GET("txs/:id", s.handleGetTx)
-	e.GET("txs", s.handleGetTxs)
+	e.GET("/blocks/:id", s.getBlock)
+	e.GET("/blocks", s.getBlocks)
+	e.GET("/last-block", s.getLastBlock)
+	e.GET("txs/:id", s.getTx)
+	e.GET("txs", s.getTxs)
+	e.GET("/accounts/:address", s.getAccount)
 	//e.GET("/tx/:hash", s.handleGetTx)
-	e.POST("/txs", s.handlePostTx)
+	e.POST("/txs", s.postTx)
 
 	return e.Start(s.ListenAddr)
 }
 
-func (s *Server) handleGetLastBlock(c echo.Context) error {
+func (s *Server) getAccount(c echo.Context) error {
+	address := c.Param("address")
+
+	var result *types.Account = nil
+
+	bytes, err := hex.DecodeString(address)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	result, err = s.bc.ReadAccountByAddress(common.NewAddressFromBytes(bytes))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, dto.AccountResponse{Account: dto.Account{
+		Address: result.Address.String(),
+		Balance: hex.EncodeToString(util.Uint64ToBytes(result.Balance)),
+	}})
+}
+
+func (s *Server) getLastBlock(c echo.Context) error {
 	block, err := s.bc.ReadLastBlock()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
@@ -82,7 +104,7 @@ func (s *Server) handleGetLastBlock(c echo.Context) error {
 	return c.JSON(http.StatusOK, intoJSONBlock(block))
 }
 
-func (s *Server) handleGetTxs(c echo.Context) error {
+func (s *Server) getTxs(c echo.Context) error {
 	query := c.QueryParams()
 
 	page, err := strconv.Atoi(query["page"][0])
@@ -130,7 +152,7 @@ func (s *Server) handleGetTxs(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.TransactionsResponse{Transactions: txs})
 }
 
-func (s *Server) handleGetBlocks(c echo.Context) error {
+func (s *Server) getBlocks(c echo.Context) error {
 	query := c.QueryParams()
 
 	page, err := strconv.Atoi(query["page"][0])
@@ -173,7 +195,7 @@ func (s *Server) handleGetBlocks(c echo.Context) error {
 //	return c.JSON(http.StatusOK, intoJSONBlocks(blocks))
 //}
 
-func (s *Server) handlePostTx(c echo.Context) error {
+func (s *Server) postTx(c echo.Context) error {
 	payload := &dto.TransactionRequest{}
 	if err := c.Bind(payload); err != nil {
 		return c.String(http.StatusBadRequest, "bad request")
@@ -218,7 +240,22 @@ func (s *Server) handlePostTx(c echo.Context) error {
 
 	s.txChan <- &tx
 
-	return nil
+	return c.JSON(http.StatusOK, dto.TransactionResponse{Transaction: dto.Transaction{
+		Hash:  tx.Hash.String(),
+		Nonce: payload.Nonce,
+		From:  payload.From,
+		To:    payload.To,
+		Value: payload.Value,
+		Data:  payload.Data,
+		Signer: dto.Signer{
+			X: payload.SignerX,
+			Y: payload.SignerY,
+		},
+		Signature: dto.Signature{
+			R: payload.SignatureR,
+			S: payload.SignatureS,
+		},
+	}})
 }
 
 //func (s *Server) handleGetTx(c echo.Context) error {
@@ -237,7 +274,7 @@ func (s *Server) handlePostTx(c echo.Context) error {
 //	return c.JSON(http.StatusOK, tx)
 //}
 
-func (s *Server) handleGetTx(c echo.Context) error {
+func (s *Server) getTx(c echo.Context) error {
 	id := c.Param("id")
 
 	var result *types.Transaction = nil
@@ -284,22 +321,17 @@ func (s *Server) handleGetTx(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.TransactionResponse{Transaction: tx})
 }
 
-func (s *Server) handleGetBlock(c echo.Context) error {
+func (s *Server) getBlock(c echo.Context) error {
 	id := c.Param("id")
 
 	height, err := strconv.Atoi(id)
-	// If the error is nil we can assume the height of the block is given.
 	if err == nil {
 		block, err := s.bc.ReadBlockByHeight(uint32(height))
 		if err != nil {
-			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
-			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 		}
-
 		return c.JSON(http.StatusOK, intoJSONBlock(block))
 	}
-
-	// otherwise assume its the hash
 
 	b, err := hex.DecodeString(id)
 	if err != nil {

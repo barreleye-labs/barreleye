@@ -147,3 +147,22 @@ func (bc *Blockchain) ReadLastTxNumber() (*uint32, error) {
 
 	return number, nil
 }
+
+func (bc *Blockchain) ReadAccountByAddress(address common.Address) (*types.Account, error) {
+	account, err := bc.db.SelectAccountByAddress(address)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
+}
+
+func (bc *Blockchain) ReadBalance(address common.Address) (*uint64, error) {
+	account, err := bc.ReadAccountByAddress(address)
+	if err != nil {
+		return nil, err
+	}
+
+	balance := account.Balance
+	return &balance, nil
+}
