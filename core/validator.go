@@ -32,7 +32,7 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 		return ErrBlockKnown
 	}
 
-	if b.Height != uint32(v.bc.Height()+1) {
+	if b.Height != v.bc.Height()+1 {
 		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(), b.Height, v.bc.Height())
 	}
 

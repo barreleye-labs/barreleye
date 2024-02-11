@@ -31,7 +31,7 @@ func NewRandomTransactionWithSignature(t *testing.T, privKey crypto.PrivateKey, 
 	return tx
 }
 
-func NewRandomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *Block {
+func NewRandomBlock(t *testing.T, height int32, prevBlockHash common.Hash) *Block {
 	txSigner := crypto.GeneratePrivateKey()
 	tx := NewRandomTransactionWithSignature(t, txSigner, 100)
 	header := &Header{
@@ -49,7 +49,7 @@ func NewRandomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *Blo
 	return b
 }
 
-func NewRandomBlockWithSignature(t *testing.T, pk crypto.PrivateKey, height uint32, prevHash common.Hash) *Block {
+func NewRandomBlockWithSignature(t *testing.T, pk crypto.PrivateKey, height int32, prevHash common.Hash) *Block {
 	b := NewRandomBlock(t, height, prevHash)
 	assert.Nil(t, b.Sign(pk))
 

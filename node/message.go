@@ -5,7 +5,7 @@ import (
 )
 
 type BlockRequestMessage struct {
-	height uint32
+	Height int32
 }
 
 type BlockResponseMessage struct {

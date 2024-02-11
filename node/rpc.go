@@ -106,8 +106,8 @@ func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
 			Data: statusMessage,
 		}, nil
 
-	case MessageTypeGetBlocks:
-		getBlocks := new(GetBlocksMessage)
+	case MessageTypeBlockRequest:
+		getBlocks := new(BlockRequestMessage)
 		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(getBlocks); err != nil {
 			return nil, err
 		}
@@ -118,7 +118,7 @@ func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
 		}, nil
 
 	case MessageTypeBlockResponse:
-		blocks := new(BlockMessage)
+		blocks := new(BlockResponseMessage)
 		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(blocks); err != nil {
 			return nil, err
 		}

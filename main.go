@@ -28,14 +28,14 @@ func main() {
 
 	if nodeName == "node1" {
 		validatorPrivKey := crypto.GeneratePrivateKey()
-		node := createNode("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
-		node.Start()
+		node1 := createNode("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
+		node1.Start()
 	} else if nodeName == "node2" {
-		node := createNode("NODE2", nil, ":4000", []string{":3000"}, ":9001")
-		node.Start()
+		node2 := createNode("NODE2", nil, ":4000", []string{":3000"}, ":9001")
+		node2.Start()
 	} else if nodeName == "node3" {
-		node := createNode("NODE3", nil, ":5000", []string{":3000", ":4000"}, "")
-		node.Start()
+		node3 := createNode("NODE3", nil, ":5000", []string{":4000"}, "")
+		node3.Start()
 	}
 
 	// fmt.Println("kyma:", nodeInfo.Node1.Endpoint)

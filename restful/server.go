@@ -31,7 +31,7 @@ type Block struct {
 	Version       uint32 `json:"version"`
 	DataHash      string `json:"dataHash"`
 	PrevBlockHash string `json:"prevBlockHash"`
-	Height        uint32 `json:"height"`
+	Height        int32  `json:"height"`
 	Timestamp     int64  `json:"timestamp"`
 	Validator     string `json:"validator"`
 	Signature     string `json:"signature"`
@@ -290,7 +290,7 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 	height, err := strconv.Atoi(id)
 	// If the error is nil we can assume the height of the block is given.
 	if err == nil {
-		block, err := s.bc.ReadBlockByHeight(uint32(height))
+		block, err := s.bc.ReadBlockByHeight(int32(height))
 		if err != nil {
 			// return c.JSON(http.StatusBadRequest, map[string]any{"error": err})
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
@@ -298,8 +298,6 @@ func (s *Server) handleGetBlock(c echo.Context) error {
 
 		return c.JSON(http.StatusOK, intoJSONBlock(block))
 	}
-
-	// otherwise assume its the hash
 
 	b, err := hex.DecodeString(id)
 	if err != nil {

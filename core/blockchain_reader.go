@@ -14,7 +14,7 @@ func (bc *Blockchain) ReadBlockByHash(hash common.Hash) (*types.Block, error) {
 	return block, nil
 }
 
-func (bc *Blockchain) ReadBlockByHeight(height uint32) (*types.Block, error) {
+func (bc *Blockchain) ReadBlockByHeight(height int32) (*types.Block, error) {
 	block, err := bc.db.SelectBlockByHeight(height)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (bc *Blockchain) ReadBlocks(page int, size int) ([]*types.Block, error) {
 	}
 
 	for i := start; i > end; i-- {
-		block, err := bc.ReadBlockByHeight(uint32(i))
+		block, err := bc.ReadBlockByHeight(int32(i))
 		if err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (bc *Blockchain) ReadLastBlock() (*types.Block, error) {
 	return block, nil
 }
 
-func (bc *Blockchain) ReadLastBlockHeight() (*uint32, error) {
+func (bc *Blockchain) ReadLastBlockHeight() (*int32, error) {
 	block, err := bc.ReadLastBlock()
 	if err != nil {
 		return nil, err

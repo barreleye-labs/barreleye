@@ -142,8 +142,8 @@ func (bc *Blockchain) GetBlock(height uint32) (*types.Block, error) {
 	return bc.blocks[height], nil
 }
 
-func (bc *Blockchain) GetHeader(height uint32) (*types.Header, error) {
-	if int32(height) > bc.Height() {
+func (bc *Blockchain) GetHeader(height int32) (*types.Header, error) {
+	if height > bc.Height() {
 		return nil, fmt.Errorf("given height (%d) too high", height)
 	}
 
@@ -165,8 +165,8 @@ func (bc *Blockchain) GetTxByHash(hash common.Hash) (*types.Transaction, error) 
 	return tx, nil
 }
 
-func (bc *Blockchain) HasBlock(height uint32) bool {
-	return int32(height) <= bc.Height()
+func (bc *Blockchain) HasBlock(height int32) bool {
+	return height <= bc.Height()
 }
 
 // [0, 1, 2 ,3] => 4 len
