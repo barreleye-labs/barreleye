@@ -46,6 +46,8 @@ type Node struct {
 	rpcCh       chan RPC
 	quitCh      chan struct{}
 	txChan      chan *types.Transaction
+
+	peersBlockHeightUntilSync uint32
 }
 
 func NewNode(opts NodeOpts) (*Node, error) {
@@ -157,7 +159,6 @@ free:
 			n.Logger.Log("msg", "🙋 peer added to the Node", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
 
 		case tx := <-n.txChan:
-			fmt.Println("aaaaaaa: ", tx)
 			if err := n.processTransaction(tx); err != nil {
 				n.Logger.Log("process TX error", err)
 			}
@@ -183,12 +184,21 @@ free:
 	n.Logger.Log("msg", "Node is shutting down")
 }
 
-func (n *Node) validatorLoop() {
+func (n *Node) validatorLoop() error {
 	ticker := time.NewTicker(n.BlockTime)
 
 	n.Logger.Log("msg", "Starting validator loop", "blockTime", n.BlockTime)
 
 	for {
+		height, err := n.chain.ReadLastBlockHeight()
+		if err != nil {
+			return err
+		}
+
+		if n.peersBlockHeightUntilSync > *height {
+			continue
+		}
+
 		n.Logger.Log("msg", "🍀 creating new block")
 
 		if err := n.createNewBlock(); err != nil {
@@ -209,47 +219,45 @@ func (n *Node) ProcessMessage(msg *DecodedMessage) error {
 		return n.processGetStatusMessage(msg.From, t)
 	case *StatusMessage:
 		return n.processStatusMessage(msg.From, t)
-	case *GetBlocksMessage:
-		return n.processGetBlocksMessage(msg.From, t)
-	case *BlocksMessage:
-		return n.processBlocksMessage(msg.From, t)
+	case *BlockRequestMessage:
+		return n.processBlockRequestMessage(msg.From, t)
+	case *BlockResponseMessage:
+		return n.processBlockResponseMessage(msg.From, t)
 	}
 
 	return nil
 }
 
-func (n *Node) processGetBlocksMessage(from net.Addr, data *GetBlocksMessage) error {
-	n.Logger.Log("msg", "📬 received getBlocks message", "from", from)
+func (n *Node) processBlockRequestMessage(from net.Addr, data *BlockRequestMessage) error {
+	n.Logger.Log("msg", "📬 received blockRequest message", "from", from)
 
-	var (
-		blocks    = []*types.Block{}
-		ourHeight = n.chain.Height()
-	)
-
-	if data.To == 0 {
-		for i := int(data.From); i <= int(ourHeight); i++ {
-			block, err := n.chain.GetBlock(uint32(i))
-			if err != nil {
-				return err
-			}
-
-			blocks = append(blocks, block)
-		}
+	height, err := n.chain.ReadLastBlockHeight()
+	if err != nil {
+		return err
 	}
 
-	blocksMsg := &BlocksMessage{
-		Blocks: blocks,
+	if *height < data.height {
+		return fmt.Errorf("requested block number %d is higher compared to block number %d in this chain", data.height, height)
+	}
+
+	block, err := n.chain.ReadBlockByHeight(data.height)
+	if err != nil {
+		return err
+	}
+
+	blockResponseMsg := &BlockResponseMessage{
+		Block: block,
 	}
 
 	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(blocksMsg); err != nil {
+	if err := gob.NewEncoder(buf).Encode(blockResponseMsg); err != nil {
 		return err
 	}
 
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
-	msg := NewMessage(MessageTypeBlocks, buf.Bytes())
+	msg := NewMessage(MessageTypeBlockResponse, buf.Bytes())
 	peer, ok := n.peerMap[from]
 	if !ok {
 		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
@@ -283,14 +291,20 @@ func (n *Node) broadcast(payload []byte) error {
 	return nil
 }
 
-func (n *Node) processBlocksMessage(from net.Addr, data *BlocksMessage) error {
-	n.Logger.Log("msg", "📦 received BLOCKS", "from", from, "aff:", data.Blocks)
+func (n *Node) processBlockResponseMessage(from net.Addr, data *BlockResponseMessage) error {
+	_ = n.Logger.Log("msg", "📦 received the requested block", "height:", data.Block.Height, "from", from)
 
-	for _, block := range data.Blocks {
-		if err := n.chain.AddBlock(block); err != nil {
-			n.Logger.Log("error", err.Error())
-			return err
-		}
+	if data.Block == nil {
+		return fmt.Errorf("no block in block response message")
+	}
+
+	if err := n.chain.AddBlock(data.Block); err != nil {
+		_ = n.Logger.Log("error", err.Error())
+		return err
+	}
+
+	if n.peersBlockHeightUntilSync > data.Block.Height {
+
 	}
 
 	return nil
@@ -301,7 +315,7 @@ func (n *Node) processStatusMessage(from net.Addr, data *StatusMessage) error {
 
 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
 	if data.CurrentHeight <= n.chain.Height() {
-		n.Logger.Log("msg", "cannot sync blockHeight to low", "curHeight", n.chain.Height(), "theirHeight", data.CurrentHeight, "addr", from)
+		n.Logger.Log("msg", "already sync", "this node height", n.chain.Height(), "network height", data.CurrentHeight, "addr", from)
 		return nil
 	}
 
@@ -373,33 +387,33 @@ func (n *Node) processTransaction(tx *types.Transaction) error {
 
 // 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
 func (n *Node) requestBlocksLoop(peer net.Addr) error {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 
 	for {
-		ourHeight := n.chain.Height()
-		n.Logger.Log("msg", "👋 requesting block height from", ourHeight+1)
-
-		getBlocksMessage := &GetBlocksMessage{
-			From: ourHeight + 1,
-			To:   0,
-		}
-
-		buf := new(bytes.Buffer)
-		if err := gob.NewEncoder(buf).Encode(getBlocksMessage); err != nil {
+		height, err := n.chain.ReadLastBlockHeight()
+		if err != nil {
 			return err
 		}
 
-		n.mu.RLock()
-		defer n.mu.RUnlock()
+		_ = n.Logger.Log("msg", "👋 requesting block height from", *height+1)
 
-		msg := NewMessage(MessageTypeGetBlocks, buf.Bytes())
+		blockRequestMessage := &BlockRequestMessage{
+			height: *height + 1,
+		}
+
+		buf := new(bytes.Buffer)
+		if err := gob.NewEncoder(buf).Encode(blockRequestMessage); err != nil {
+			return err
+		}
+
+		msg := NewMessage(MessageTypeBlockRequest, buf.Bytes())
 		peer, ok := n.peerMap[peer]
 		if !ok {
 			return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
 		}
 
 		if err := peer.Send(msg.Bytes()); err != nil {
-			n.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
+			_ = n.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
 		}
 
 		<-ticker.C

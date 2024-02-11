@@ -34,7 +34,7 @@ func main() {
 		node := createNode("NODE2", nil, ":4000", []string{":3000"}, ":9001")
 		node.Start()
 	} else if nodeName == "node3" {
-		node := createNode("NODE3", nil, ":5000", []string{":4000"}, "")
+		node := createNode("NODE3", nil, ":5000", []string{":3000", ":4000"}, "")
 		node.Start()
 	}
 

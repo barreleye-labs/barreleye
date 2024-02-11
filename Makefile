@@ -10,5 +10,8 @@ node1: build
 node2: build
 	./bin/barreleye -nodeName=node2
 
+node3: build
+	./bin/barreleye -nodeName=node3
+
 test:
 	go test ./...

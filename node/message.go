@@ -4,14 +4,12 @@ import (
 	"github.com/barreleye-labs/barreleye/core/types"
 )
 
-type GetBlocksMessage struct {
-	From int32
-	// If to is 0 the maximum blocks will be returned.
-	To uint32
+type BlockRequestMessage struct {
+	height uint32
 }
 
-type BlocksMessage struct {
-	Blocks []*types.Block
+type BlockResponseMessage struct {
+	Block *types.Block
 }
 
 type GetStatusMessage struct {
