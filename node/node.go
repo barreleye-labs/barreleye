@@ -40,12 +40,13 @@ type Node struct {
 	peerMap map[net.Addr]*TCPPeer
 
 	NodeOpts
-	mempool     *TxPool
-	chain       *core.Blockchain
-	isValidator bool
-	rpcCh       chan RPC
-	quitCh      chan struct{}
-	txChan      chan *types.Transaction
+	mempool      *TxPool
+	chain        *core.Blockchain
+	isValidator  bool
+	rpcCh        chan RPC
+	quitCh       chan struct{}
+	txChan       chan *types.Transaction
+	miningTicker *time.Ticker
 
 	peersBlockHeightUntilSync int32
 }
@@ -99,6 +100,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		rpcCh:        make(chan RPC),
 		quitCh:       make(chan struct{}, 1),
 		txChan:       txChan,
+		miningTicker: time.NewTicker(opts.BlockTime),
 	}
 
 	s.TCPTransport.peerCh = peerCh
@@ -109,9 +111,9 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		s.RPCProcessor = s
 	}
 
-	if s.isValidator {
-		go s.validatorLoop()
-	}
+	//if s.isValidator {
+	//	go s.mine()
+	//}
 
 	return s, nil
 }
@@ -151,7 +153,7 @@ free:
 
 			go peer.readLoop(n.rpcCh)
 
-			if err := n.sendGetStatusMessage(peer); err != nil {
+			if err := n.sendChainInfoRequestMessage(peer); err != nil {
 				n.Logger.Log("err", err)
 				continue
 			}
@@ -184,28 +186,26 @@ free:
 	_ = n.Logger.Log("msg", "Node is shutting down")
 }
 
-func (n *Node) validatorLoop() error {
-	ticker := time.NewTicker(n.BlockTime)
-
+func (n *Node) mineUsingProofOfRandom() error {
 	_ = n.Logger.Log("msg", "Starting validator loop", "blockTime", n.BlockTime)
 
 	for {
-		height, err := n.chain.ReadLastBlockHeight()
-		if err != nil {
-			return err
+		//height, err := n.chain.ReadLastBlockHeight()
+		//if err != nil {
+		//	return err
+		//}
+		//
+		//if n.peersBlockHeightUntilSync > *height {
+		//	continue
+		//}
+
+		<-n.miningTicker.C
+
+		if err := n.sealBlock(); err != nil {
+			_ = n.Logger.Log("sealing block error", err)
 		}
 
-		if n.peersBlockHeightUntilSync > *height {
-			continue
-		}
-
-		_ = n.Logger.Log("msg", "🍀 creating new block")
-
-		if err := n.createNewBlock(); err != nil {
-			_ = n.Logger.Log("create block error", err)
-		}
-
-		<-ticker.C
+		_ = n.Logger.Log("msg", "🍀 block mining success")
 	}
 }
 
@@ -215,10 +215,10 @@ func (n *Node) ProcessMessage(msg *DecodedMessage) error {
 		return n.processTransaction(t)
 	case *types.Block:
 		return n.processBlock(t)
-	case *GetStatusMessage:
-		return n.processGetStatusMessage(msg.From)
-	case *StatusMessage:
-		return n.processStatusMessage(msg.From, t)
+	case *ChainInfoRequestMessage:
+		return n.processChainInfoRequestMessage(msg.From)
+	case *ChainInfoResponseMessage:
+		return n.processChainInfoResponseMessage(msg.From, t)
 	case *BlockRequestMessage:
 		return n.processBlockRequestMessage(msg.From, t)
 	case *BlockResponseMessage:
@@ -266,9 +266,9 @@ func (n *Node) processBlockRequestMessage(from net.Addr, data *BlockRequestMessa
 	return peer.Send(msg.Bytes())
 }
 
-func (n *Node) sendGetStatusMessage(peer *TCPPeer) error {
+func (n *Node) sendChainInfoRequestMessage(peer *TCPPeer) error {
 	var (
-		getStatusMsg = new(GetStatusMessage)
+		getStatusMsg = new(ChainInfoRequestMessage)
 		buf          = new(bytes.Buffer)
 	)
 
@@ -309,7 +309,7 @@ func (n *Node) processBlockResponseMessage(from net.Addr, data *BlockResponseMes
 		}
 	} else if n.peersBlockHeightUntilSync == data.Block.Height {
 		peer := n.peerMap[from]
-		if err := n.sendGetStatusMessage(peer); err != nil {
+		if err := n.sendChainInfoRequestMessage(peer); err != nil {
 			return err
 		}
 	}
@@ -317,8 +317,8 @@ func (n *Node) processBlockResponseMessage(from net.Addr, data *BlockResponseMes
 	return nil
 }
 
-func (n *Node) processStatusMessage(from net.Addr, data *StatusMessage) error {
-	n.Logger.Log("msg", "📬 received STATUS message", "from", from)
+func (n *Node) processChainInfoResponseMessage(from net.Addr, data *ChainInfoResponseMessage) error {
+	n.Logger.Log("msg", "📬 received chain info response message", "from", from)
 
 	height, err := n.chain.ReadLastBlockHeight()
 	if err != nil {
@@ -332,6 +332,7 @@ func (n *Node) processStatusMessage(from net.Addr, data *StatusMessage) error {
 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
 	if data.CurrentHeight <= *height {
 		n.Logger.Log("msg", "already sync", "this node height", height, "network height", data.CurrentHeight, "addr", from)
+		go n.mineUsingProofOfRandom()
 		return nil
 	}
 
@@ -344,8 +345,8 @@ func (n *Node) processStatusMessage(from net.Addr, data *StatusMessage) error {
 	return nil
 }
 
-func (n *Node) processGetStatusMessage(from net.Addr) error {
-	_ = n.Logger.Log("msg", "📬 received getStatus message", "from", from)
+func (n *Node) processChainInfoRequestMessage(from net.Addr) error {
+	_ = n.Logger.Log("msg", "📬 received chain info request message", "from", from)
 
 	height, err := n.chain.ReadLastBlockHeight()
 	if err != nil {
@@ -356,8 +357,12 @@ func (n *Node) processGetStatusMessage(from net.Addr) error {
 		height = &temp
 	}
 
-	statusMessage := &StatusMessage{
-		CurrentHeight: *height,
+	return n.sendChainInfoResponseMessage(from, *height)
+}
+
+func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
+	statusMessage := &ChainInfoResponseMessage{
+		CurrentHeight: height,
 		ID:            n.ID,
 	}
 
@@ -380,6 +385,7 @@ func (n *Node) processGetStatusMessage(from net.Addr) error {
 }
 
 func (n *Node) processBlock(b *types.Block) error {
+	n.miningTicker.Reset(n.BlockTime)
 	if err := n.chain.AddBlock(b); err != nil {
 		n.Logger.Log("error", err.Error())
 		return err
@@ -462,9 +468,9 @@ func (n *Node) broadcastTx(tx *types.Transaction) error {
 	return n.broadcast(msg.Bytes())
 }
 
-func (n *Node) createNewBlock() error {
+func (n *Node) sealBlock() error {
 	if n.chain.Height() < 0 {
-		return fmt.Errorf("can not create block without genesis block")
+		return fmt.Errorf("can not seal the block without genesis block")
 	}
 
 	currentHeader, err := n.chain.GetHeader(n.chain.Height())

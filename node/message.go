@@ -12,11 +12,10 @@ type BlockResponseMessage struct {
 	Block *types.Block
 }
 
-type GetStatusMessage struct {
+type ChainInfoRequestMessage struct {
 }
 
-type StatusMessage struct {
-	// the id of the server
+type ChainInfoResponseMessage struct {
 	ID            string
 	Version       uint32
 	CurrentHeight int32

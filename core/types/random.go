@@ -25,9 +25,9 @@ func NewRandomTransaction(size int) *Transaction {
 	return NewTransaction(RandomBytes(size))
 }
 
-func NewRandomTransactionWithSignature(t *testing.T, privKey crypto.PrivateKey, size int) *Transaction {
+func NewRandomTransactionWithSignature(t *testing.T, privatKey crypto.PrivateKey, size int) *Transaction {
 	tx := NewRandomTransaction(size)
-	assert.Nil(t, tx.Sign(privKey))
+	assert.Nil(t, tx.Sign(privatKey))
 	return tx
 }
 

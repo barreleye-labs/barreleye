@@ -12,28 +12,25 @@ import (
 )
 
 type Blockchain struct {
-	logger log.Logger
-	store  Storage
-	// TODO: double check this!
-	lock         sync.RWMutex
-	headers      []*types.Header
-	blocks       []*types.Block
-	txStore      map[common.Hash]*types.Transaction
-	blockStore   map[common.Hash]*types.Block
-	accountState *AccountState
-	stateLock    sync.RWMutex
-	validator    Validator
-	// TODO: make this an interface.
+	logger        log.Logger
+	store         Storage
+	lock          sync.RWMutex
+	headers       []*types.Header
+	blocks        []*types.Block
+	txStore       map[common.Hash]*types.Transaction
+	blockStore    map[common.Hash]*types.Block
+	accountState  *AccountState
+	stateLock     sync.RWMutex
+	validator     Validator
 	contractState *State
 	db            *barreldb.BarrelDatabase
 }
 
 func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.Block) (*Blockchain, error) {
-	// We should create all states inside the scope of the newblockchain.
-	// TODO: read this from disk later on
 	accountState := NewAccountState()
 
 	if privateKey != nil {
+
 		coinbase := privateKey.PublicKey()
 		accountState.CreateAccount(coinbase.Address())
 	}

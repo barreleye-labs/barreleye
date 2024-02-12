@@ -92,11 +92,11 @@ func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
 	case MessageTypeGetStatus:
 		return &DecodedMessage{
 			From: rpc.From,
-			Data: &GetStatusMessage{},
+			Data: &ChainInfoRequestMessage{},
 		}, nil
 
 	case MessageTypeStatus:
-		statusMessage := new(StatusMessage)
+		statusMessage := new(ChainInfoResponseMessage)
 		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(statusMessage); err != nil {
 			return nil, err
 		}
