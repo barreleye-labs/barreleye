@@ -2,31 +2,35 @@ package node
 
 import (
 	"github.com/barreleye-labs/barreleye/core/types"
+	"github.com/barreleye-labs/barreleye/crypto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTxMaxLength(t *testing.T) {
+	privateKey := crypto.GeneratePrivateKey()
 	p := NewTxPool(1)
-	p.Add(types.NewRandomTransaction(10))
+	p.Add(types.NewRandomTransaction(privateKey))
 	assert.Equal(t, 1, p.all.Count())
 
-	p.Add(types.NewRandomTransaction(10))
-	p.Add(types.NewRandomTransaction(10))
-	p.Add(types.NewRandomTransaction(10))
-	tx := types.NewRandomTransaction(100)
+	p.Add(types.NewRandomTransaction(privateKey))
+	p.Add(types.NewRandomTransaction(privateKey))
+	p.Add(types.NewRandomTransaction(privateKey))
+	tx := types.NewRandomTransaction(privateKey)
 	p.Add(tx)
 	assert.Equal(t, 1, p.all.Count())
 	assert.True(t, p.Contains(tx.GetHash()))
 }
 
 func TestTxPoolAdd(t *testing.T) {
+	privateKey := crypto.GeneratePrivateKey()
+
 	p := NewTxPool(11)
 	n := 10
 
 	for i := 1; i <= n; i++ {
-		tx := types.NewRandomTransaction(100)
+		tx := types.NewRandomTransaction(privateKey)
 		p.Add(tx)
 		// cannot add twice
 		p.Add(tx)
@@ -38,13 +42,15 @@ func TestTxPoolAdd(t *testing.T) {
 }
 
 func TestTxPoolMaxLength(t *testing.T) {
+	privateKey := crypto.GeneratePrivateKey()
+
 	maxLen := 10
 	p := NewTxPool(maxLen)
 	n := 100
 	txx := []*types.Transaction{}
 
 	for i := 0; i < n; i++ {
-		tx := types.NewRandomTransaction(100)
+		tx := types.NewRandomTransaction(privateKey)
 		p.Add(tx)
 
 		if i > n-(maxLen+1) {
@@ -61,22 +67,26 @@ func TestTxPoolMaxLength(t *testing.T) {
 }
 
 func TestTxSortedMapFirst(t *testing.T) {
+	privateKey := crypto.GeneratePrivateKey()
+
 	m := NewTxSortedMap()
-	first := types.NewRandomTransaction(100)
+	first := types.NewRandomTransaction(privateKey)
 	m.Add(first)
-	m.Add(types.NewRandomTransaction(10))
-	m.Add(types.NewRandomTransaction(10))
-	m.Add(types.NewRandomTransaction(10))
-	m.Add(types.NewRandomTransaction(10))
+	m.Add(types.NewRandomTransaction(privateKey))
+	m.Add(types.NewRandomTransaction(privateKey))
+	m.Add(types.NewRandomTransaction(privateKey))
+	m.Add(types.NewRandomTransaction(privateKey))
 	assert.Equal(t, first, m.First())
 }
 
 func TestTxSortedMapAdd(t *testing.T) {
+	privateKey := crypto.GeneratePrivateKey()
+
 	m := NewTxSortedMap()
 	n := 100
 
 	for i := 0; i < n; i++ {
-		tx := types.NewRandomTransaction(100)
+		tx := types.NewRandomTransaction(privateKey)
 		m.Add(tx)
 		// cannot add the same twice
 		m.Add(tx)
@@ -94,9 +104,11 @@ func TestTxSortedMapAdd(t *testing.T) {
 }
 
 func TestTxSortedMapRemove(t *testing.T) {
+	privateKey := crypto.GeneratePrivateKey()
+
 	m := NewTxSortedMap()
 
-	tx := types.NewRandomTransaction(100)
+	tx := types.NewRandomTransaction(privateKey)
 	m.Add(tx)
 	assert.Equal(t, m.Count(), 1)
 

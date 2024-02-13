@@ -21,6 +21,15 @@ type Transaction struct {
 	Signature Signature `json:"signature"`
 }
 
+type Account struct {
+	Address string `json:"address"`
+	Balance string `json:"balance"`
+}
+
+type AccountResponse struct {
+	Account Account `json:"account"`
+}
+
 type TransactionRequest struct {
 	Nonce      string `json:"nonce"`
 	From       string `json:"from"`

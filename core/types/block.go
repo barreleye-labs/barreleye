@@ -126,15 +126,11 @@ func (b *Block) GetHash() common.Hash {
 }
 
 func CalculateDataHash(txx []*Transaction) (hash common.Hash, err error) {
-	buf := &bytes.Buffer{}
-
+	buf := []byte{}
 	for _, tx := range txx {
-		if err = tx.Encode(NewGobTxEncoder(buf)); err != nil {
-			return
-		}
+		buf = append(buf, tx.GetHash().ToSlice()...)
 	}
-
-	hash = sha256.Sum256(buf.Bytes())
+	hash = sha256.Sum256(buf)
 
 	return
 }

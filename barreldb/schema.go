@@ -11,6 +11,8 @@ var (
 	LastTxTableName       = "lastTx"
 	LastTxNumberTableName = "lastTxNumber"
 
+	AddressAccountTableName = "address-account"
+
 	// prefix ----------------------------------------
 	HashBlockPrefix   = "hash-block"
 	HeightBlockPrefix = "height-block"
@@ -20,4 +22,6 @@ var (
 	NumberTxPrefix     = "number-tx"
 	LastTxPrefix       = "lastTx"
 	LastTxNumberPrefix = "lastTxNumber"
+
+	AddressAccountPrefix = "address-account"
 )

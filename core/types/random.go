@@ -21,13 +21,22 @@ func RandomHash() common.Hash {
 }
 
 // NewRandomTransaction return a new random transaction whithout signature.
-func NewRandomTransaction(size int) *Transaction {
-	return NewTransaction(RandomBytes(size))
+func NewRandomTransaction(privateKey crypto.PrivateKey) *Transaction {
+	s := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(s)
+
+	return &Transaction{
+		Nonce: 171, //ab
+		From:  privateKey.PublicKey().Address(),
+		To:    privateKey.PublicKey().Address(),
+		Value: 171, //ab
+		Data:  RandomBytes(r.Intn(1000)),
+	}
 }
 
-func NewRandomTransactionWithSignature(t *testing.T, privatKey crypto.PrivateKey, size int) *Transaction {
-	tx := NewRandomTransaction(size)
-	assert.Nil(t, tx.Sign(privatKey))
+func NewRandomTransactionWithSignature(t *testing.T, privateKey crypto.PrivateKey, size int) *Transaction {
+	tx := NewRandomTransaction(privateKey)
+	assert.Nil(t, tx.Sign(privateKey))
 	return tx
 }
 

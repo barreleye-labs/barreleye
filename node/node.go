@@ -66,7 +66,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 
 	var genesis *types.Block = nil
 	if opts.ID == "GENESIS-NODE" {
-		genesis = genesisBlock(opts.PrivateKey)
+		genesis = CreateGenesisBlock(opts.PrivateKey)
 		_ = opts.Logger.Log("msg", "🌞 create genesis block")
 	}
 
@@ -399,13 +399,13 @@ func (n *Node) processChainInfoRequestMessage(from net.Addr) error {
 }
 
 func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
-	statusMessage := &ChainInfoResponseMessage{
+	chainInfoResponseMessage := &ChainInfoResponseMessage{
 		CurrentHeight: height,
 		ID:            n.ID,
 	}
 
 	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(statusMessage); err != nil {
+	if err := gob.NewEncoder(buf).Encode(chainInfoResponseMessage); err != nil {
 		return err
 	}
 
@@ -506,7 +506,7 @@ func (n *Node) sealBlock() error {
 	return nil
 }
 
-func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
+func CreateGenesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	header := &types.Header{
 		Version:   1,
 		DataHash:  common.Hash{},
@@ -517,11 +517,14 @@ func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	b, _ := types.NewBlock(header, nil)
 
 	coinbase := privateKey.PublicKey()
-	tx := types.NewTransaction(nil)
-	tx.Signer = coinbase
-	tx.From = coinbase.Address()
-	tx.To = coinbase.Address()
-	tx.Value = 171 //ab
+
+	tx := &types.Transaction{
+		Nonce: 171, //ab
+		From:  coinbase.Address(),
+		To:    coinbase.Address(),
+		Value: 171, //ab
+		Data:  []byte{171},
+	}
 
 	if err := tx.Sign(*privateKey); err != nil {
 		panic(err)
