@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 )
@@ -34,6 +35,10 @@ func (bc *Blockchain) ReadBlocks(page int, size int) ([]*types.Block, error) {
 
 	blocks := []*types.Block{}
 
+	if lastBlock == nil {
+		return blocks, nil
+	}
+
 	lastBlockHeight := int(lastBlock.Height)
 	start := lastBlockHeight - offset
 	if start < 0 {
@@ -50,12 +55,16 @@ func (bc *Blockchain) ReadBlocks(page int, size int) ([]*types.Block, error) {
 		if err != nil {
 			return nil, err
 		}
+		if block == nil {
+			return nil, fmt.Errorf("block %d is nil", i)
+		}
 		blocks = append(blocks, block)
 	}
 
 	return blocks, nil
 }
 
+// 사용시 수정 필요함.
 func (bc *Blockchain) ReadBlocksByHash(hash common.Hash, size int) ([]*types.Block, error) {
 	blocks := []*types.Block{}
 	for i := 0; i < size; i++ {
@@ -82,6 +91,11 @@ func (bc *Blockchain) ReadLastBlockHeight() (*int32, error) {
 	block, err := bc.ReadLastBlock()
 	if err != nil {
 		return nil, err
+	}
+
+	if block == nil {
+		height := int32(-1)
+		return &height, nil
 	}
 
 	return &block.Height, nil
@@ -115,6 +129,10 @@ func (bc *Blockchain) ReadTxs(page int, size int) ([]*types.Transaction, error) 
 
 	txs := []*types.Transaction{}
 
+	if lastTxNumber == nil {
+		return txs, nil
+	}
+
 	start := int(*lastTxNumber) - offset
 	if start < 0 {
 		return txs, nil
@@ -129,6 +147,9 @@ func (bc *Blockchain) ReadTxs(page int, size int) ([]*types.Transaction, error) 
 		tx, err := bc.ReadTxByNumber(uint32(i))
 		if err != nil {
 			return nil, err
+		}
+		if tx == nil {
+			return nil, fmt.Errorf("tx is nil")
 		}
 		txs = append(txs, tx)
 	}
@@ -167,6 +188,11 @@ func (bc *Blockchain) ReadBalance(address common.Address) (*uint64, error) {
 	account, err := bc.ReadAccountByAddress(address)
 	if err != nil {
 		return nil, err
+	}
+
+	if account == nil {
+		bal := uint64(0)
+		return &bal, nil
 	}
 
 	balance := account.Balance

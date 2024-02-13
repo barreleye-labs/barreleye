@@ -67,6 +67,10 @@ func (bc *Blockchain) WriteAccountWithAddress(address common.Address, account *t
 
 func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 	fromAccount, err := bc.ReadAccountByAddress(from)
+	if err != nil {
+		return err
+	}
+
 	if fromAccount == nil {
 		// TODO: Register account at Coin Faucet
 		fromAccount, err = bc.WriteAccountWithAddress(from, nil)
@@ -76,6 +80,10 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 	}
 
 	toAccount, err := bc.ReadAccountByAddress(to)
+	if err != nil {
+		return err
+	}
+
 	if toAccount == nil {
 		toAccount, err = bc.WriteAccountWithAddress(to, nil)
 		if err != nil {
