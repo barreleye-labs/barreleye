@@ -19,7 +19,7 @@ func (barrelDB *BarrelDatabase) InsertBlockWithHash(hash common.Hash, block *typ
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height uint32, block *types.Block) error {
+func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height int32, block *types.Block) error {
 	buf := &bytes.Buffer{}
 	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
 		return err
@@ -58,7 +58,7 @@ func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Bloc
 	return block, nil
 }
 
-func (barrelDB *BarrelDatabase) SelectBlockByHeight(height uint32) (*types.Block, error) {
+func (barrelDB *BarrelDatabase) SelectBlockByHeight(height int32) (*types.Block, error) {
 	data, err := barrelDB.GetTable(HeightBlockTableName).Get([]byte(strconv.Itoa(int(height))))
 	if err != nil {
 		return nil, err

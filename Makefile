@@ -4,11 +4,14 @@ build:
 run: build
 	./bin/barreleye
 
-node1: build
-	./bin/barreleye -nodeName=node1
+genesis-node: build
+	./bin/barreleye -nodeName=genesis-node
 
-node2: build
-	./bin/barreleye -nodeName=node2
+wayne: build
+	./bin/barreleye -nodeName=wayne
+
+usi: build
+	./bin/barreleye -nodeName=usi
 
 test:
 	go test ./...

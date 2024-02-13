@@ -15,7 +15,7 @@ type Header struct {
 	Version       uint32
 	DataHash      common.Hash
 	PrevBlockHash common.Hash
-	Height        uint32
+	Height        int32
 	Timestamp     int64
 }
 

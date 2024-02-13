@@ -31,7 +31,7 @@ type Block struct {
 	Version       uint32 `json:"version"`
 	DataHash      string `json:"dataHash"`
 	PrevBlockHash string `json:"prevBlockHash"`
-	Height        uint32 `json:"height"`
+	Height        int32  `json:"height"`
 	Timestamp     int64  `json:"timestamp"`
 	Validator     string `json:"validator"`
 	Signature     string `json:"signature"`
@@ -326,7 +326,7 @@ func (s *Server) getBlock(c echo.Context) error {
 
 	height, err := strconv.Atoi(id)
 	if err == nil {
-		block, err := s.bc.ReadBlockByHeight(uint32(height))
+		block, err := s.bc.ReadBlockByHeight(int32(height))
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 		}

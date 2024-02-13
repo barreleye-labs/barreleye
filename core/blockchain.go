@@ -12,23 +12,28 @@ import (
 )
 
 type Blockchain struct {
-	logger log.Logger
-	store  Storage
-	// TODO: double check this!
-	lock         sync.RWMutex
-	headers      []*types.Header
-	blocks       []*types.Block
-	txStore      map[common.Hash]*types.Transaction
-	blockStore   map[common.Hash]*types.Block
-	accountState *AccountState
-	stateLock    sync.RWMutex
-	validator    Validator
-	// TODO: make this an interface.
+	logger        log.Logger
+	store         Storage
+	lock          sync.RWMutex
+	headers       []*types.Header
+	blocks        []*types.Block
+	txStore       map[common.Hash]*types.Transaction
+	blockStore    map[common.Hash]*types.Block
+	accountState  *AccountState
+	stateLock     sync.RWMutex
+	validator     Validator
 	contractState *State
 	db            *barreldb.BarrelDatabase
 }
 
 func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.Block) (*Blockchain, error) {
+	accountState := NewAccountState()
+
+	if genesis != nil {
+		coinbase := privateKey.PublicKey()
+		accountState.CreateAccount(coinbase.Address())
+	}
+
 	db, _ := barreldb.New()
 
 	/*
@@ -154,8 +159,8 @@ func (bc *Blockchain) GetBlock(height uint32) (*types.Block, error) {
 	return bc.blocks[height], nil
 }
 
-func (bc *Blockchain) GetHeader(height uint32) (*types.Header, error) {
-	if int32(height) > bc.Height() {
+func (bc *Blockchain) GetHeader(height int32) (*types.Header, error) {
+	if height > bc.Height() {
 		return nil, fmt.Errorf("given height (%d) too high", height)
 	}
 
@@ -177,8 +182,8 @@ func (bc *Blockchain) GetTxByHash(hash common.Hash) (*types.Transaction, error) 
 	return tx, nil
 }
 
-func (bc *Blockchain) HasBlock(height uint32) bool {
-	return int32(height) <= bc.Height()
+func (bc *Blockchain) HasBlock(height int32) bool {
+	return height <= bc.Height()
 }
 
 // [0, 1, 2 ,3] => 4 len

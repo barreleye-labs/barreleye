@@ -26,16 +26,16 @@ func main() {
 	// fmt.Println("error:", err)
 	// }
 
-	if nodeName == "node1" {
-		validatorPrivKey := crypto.GeneratePrivateKey()
-		node := createNode("NODE1", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
-		node.Start()
-	} else if nodeName == "node2" {
-		node := createNode("NODE2", nil, ":4000", []string{":3000"}, ":9001")
-		node.Start()
-	} else if nodeName == "node3" {
-		node := createNode("NODE3", nil, ":5000", []string{":4000"}, "")
-		node.Start()
+	nodePrivateKey := crypto.GeneratePrivateKey()
+	if nodeName == "genesis-node" {
+		node1 := createNode("GENESIS-NODE", &nodePrivateKey, ":3000", []string{":4000"}, ":9000")
+		node1.Start()
+	} else if nodeName == "wayne" {
+		node2 := createNode("WAYNE", &nodePrivateKey, ":4000", []string{":3000"}, ":9001")
+		node2.Start()
+	} else if nodeName == "usi" {
+		node3 := createNode("USI", &nodePrivateKey, ":5000", []string{":4000"}, "")
+		node3.Start()
 	}
 
 	// fmt.Println("kyma:", nodeInfo.Node1.Endpoint)

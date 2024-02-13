@@ -12,7 +12,7 @@ func (bc *Blockchain) WriteBlockWithHash(hash common.Hash, block *types.Block) e
 	return nil
 }
 
-func (bc *Blockchain) WriteBlockWithHeight(height uint32, block *types.Block) error {
+func (bc *Blockchain) WriteBlockWithHeight(height int32, block *types.Block) error {
 	if err := bc.db.InsertBlockWithHeight(height, block); err != nil {
 		return err
 	}
