@@ -22,7 +22,10 @@ func (barrelDB *BarrelDatabase) InsertAccountWithAddress(address common.Address,
 func (barrelDB *BarrelDatabase) SelectAccountByAddress(address common.Address) (*types.Account, error) {
 	data, err := barrelDB.GetTable(AddressAccountTableName).Get(address.ToSlice())
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	account := new(types.Account)

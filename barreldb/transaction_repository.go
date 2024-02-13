@@ -57,7 +57,10 @@ func (barrelDB *BarrelDatabase) InsertLastTxNumber(number uint32) error {
 func (barrelDB *BarrelDatabase) SelectTxByHash(hash common.Hash) (*types.Transaction, error) {
 	data, err := barrelDB.GetTable(HashTxTableName).Get(hash.ToSlice())
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	tx := new(types.Transaction)
@@ -72,7 +75,10 @@ func (barrelDB *BarrelDatabase) SelectTxByHash(hash common.Hash) (*types.Transac
 func (barrelDB *BarrelDatabase) SelectTxByNumber(number uint32) (*types.Transaction, error) {
 	data, err := barrelDB.GetTable(NumberTxTableName).Get([]byte(strconv.Itoa(int(number))))
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	tx := new(types.Transaction)
@@ -87,7 +93,10 @@ func (barrelDB *BarrelDatabase) SelectTxByNumber(number uint32) (*types.Transact
 func (barrelDB *BarrelDatabase) SelectLastTx() (*types.Transaction, error) {
 	data, err := barrelDB.GetTable(LastTxTableName).Get([]byte{})
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	tx := new(types.Transaction)
@@ -102,7 +111,10 @@ func (barrelDB *BarrelDatabase) SelectLastTx() (*types.Transaction, error) {
 func (barrelDB *BarrelDatabase) SelectLastTxNumber() (*uint32, error) {
 	data, err := barrelDB.GetTable(LastTxNumberTableName).Get([]byte{})
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	number, err := strconv.Atoi(hex.EncodeToString(data))

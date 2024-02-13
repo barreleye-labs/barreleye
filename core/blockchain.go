@@ -79,8 +79,6 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 		return nil, err
 	}
 
-	accountState := NewAccountState()
-
 	bc := &Blockchain{
 		contractState: NewState(),
 		headers:       []*types.Header{},
@@ -266,8 +264,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 		nextTxNumber := uint32(0)
 		number, err := bc.ReadLastTxNumber()
 		if err != nil {
-
-			//return err
+			return err
 		}
 
 		if number != nil {

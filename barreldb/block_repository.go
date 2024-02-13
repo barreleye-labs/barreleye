@@ -46,7 +46,10 @@ func (barrelDB *BarrelDatabase) InsertLastBlock(block *types.Block) error {
 func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Block, error) {
 	data, err := barrelDB.GetTable(HashBlockTableName).Get(hash.ToSlice())
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	block := new(types.Block)
@@ -61,7 +64,10 @@ func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Bloc
 func (barrelDB *BarrelDatabase) SelectBlockByHeight(height int32) (*types.Block, error) {
 	data, err := barrelDB.GetTable(HeightBlockTableName).Get([]byte(strconv.Itoa(int(height))))
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	block := new(types.Block)
@@ -76,7 +82,10 @@ func (barrelDB *BarrelDatabase) SelectBlockByHeight(height int32) (*types.Block,
 func (barrelDB *BarrelDatabase) SelectLastBlock() (*types.Block, error) {
 	data, err := barrelDB.GetTable(LastBlockTableName).Get([]byte{})
 	if err != nil {
-		return nil, err
+		if err.Error() != common.LevelDBNotFoundError {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	block := new(types.Block)

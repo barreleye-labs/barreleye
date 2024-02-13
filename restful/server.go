@@ -89,6 +89,10 @@ func (s *Server) getAccount(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
+	if result == nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found account").Error()})
+	}
+
 	return c.JSON(http.StatusOK, dto.AccountResponse{Account: dto.Account{
 		Address: result.Address.String(),
 		Balance: hex.EncodeToString(util.Uint64ToBytes(result.Balance)),
@@ -101,6 +105,9 @@ func (s *Server) getLastBlock(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
+	if block == nil {
+		c.JSON(http.StatusOK, nil)
+	}
 	return c.JSON(http.StatusOK, intoJSONBlock(block))
 }
 
@@ -283,7 +290,7 @@ func (s *Server) getTx(c echo.Context) error {
 	if err == nil {
 		result, err = s.bc.ReadTxByNumber(uint32(number))
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()}) // 위와 같은 의미. 코드 리팩토링
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 		}
 	} else {
 		hash, err := hex.DecodeString(id)
@@ -295,6 +302,10 @@ func (s *Server) getTx(c echo.Context) error {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 		}
+	}
+
+	if result == nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found tx").Error()})
 	}
 
 	signer := dto.Signer{
@@ -330,6 +341,10 @@ func (s *Server) getBlock(c echo.Context) error {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 		}
+
+		if block == nil {
+			return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found").Error()})
+		}
 		return c.JSON(http.StatusOK, intoJSONBlock(block))
 	}
 
@@ -341,6 +356,10 @@ func (s *Server) getBlock(c echo.Context) error {
 	block, err := s.bc.ReadBlockByHash(common.HashFromBytes(b))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	if block == nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found").Error()})
 	}
 
 	return c.JSON(http.StatusOK, intoJSONBlock(block))

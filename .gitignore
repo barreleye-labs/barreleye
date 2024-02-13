@@ -1,6 +1,7 @@
 bin
-node1
-node2
-node3
+barreldb/genesis-node
+barreldb/wayne
+barreldb/usi
+barreldb/data
 data
 .idea

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"math/rand"
 	"net"
@@ -278,6 +277,10 @@ func (n *Node) processBlockRequestMessage(from net.Addr, data *BlockRequestMessa
 		return err
 	}
 
+	if block == nil {
+		return fmt.Errorf("not found block")
+	}
+
 	blockResponseMsg := &BlockResponseMessage{
 		Block: block,
 	}
@@ -361,11 +364,7 @@ func (n *Node) processChainInfoResponseMessage(from net.Addr, data *ChainInfoRes
 
 	height, err := n.chain.ReadLastBlockHeight()
 	if err != nil {
-		if err.Error() != common.LevelDBNotFoundError {
-			return err
-		}
-		temp := int32(-1)
-		height = &temp
+		return err
 	}
 
 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
@@ -389,11 +388,7 @@ func (n *Node) processChainInfoRequestMessage(from net.Addr) error {
 
 	height, err := n.chain.ReadLastBlockHeight()
 	if err != nil {
-		if err.Error() != common.LevelDBNotFoundError {
-			return err
-		}
-		temp := int32(-1)
-		height = &temp
+		return err
 	}
 	return n.sendChainInfoResponseMessage(from, *height)
 }
@@ -507,15 +502,6 @@ func (n *Node) sealBlock() error {
 }
 
 func CreateGenesisBlock(privateKey *crypto.PrivateKey) *types.Block {
-	header := &types.Header{
-		Version:   1,
-		DataHash:  common.Hash{},
-		Height:    0,
-		Timestamp: 000000,
-	}
-
-	b, _ := types.NewBlock(header, nil)
-
 	coinbase := privateKey.PublicKey()
 
 	tx := &types.Transaction{
@@ -529,7 +515,18 @@ func CreateGenesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	if err := tx.Sign(*privateKey); err != nil {
 		panic(err)
 	}
+
+	header := &types.Header{
+		Version:   1,
+		Height:    0,
+		Timestamp: time.Now().UnixNano(),
+	}
+
+	b, _ := types.NewBlock(header, nil)
+
 	b.Transactions = append(b.Transactions, tx)
+	hash, _ := types.CalculateDataHash(b.Transactions)
+	b.DataHash = hash
 
 	if err := b.Sign(*privateKey); err != nil {
 		panic(err)
