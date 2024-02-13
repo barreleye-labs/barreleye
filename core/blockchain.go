@@ -29,8 +29,7 @@ type Blockchain struct {
 func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.Block) (*Blockchain, error) {
 	accountState := NewAccountState()
 
-	if privateKey != nil {
-
+	if genesis != nil {
 		coinbase := privateKey.PublicKey()
 		accountState.CreateAccount(coinbase.Address())
 	}

@@ -53,7 +53,7 @@ func (barrelDB *BarrelDatabase) Put(key []byte, value []byte) error {
 
 func DefaultDataDir() string {
 	_, filename, _, _ := runtime.Caller(0)
-	root := path.Join(path.Dir(filename), "..")
+	root := path.Join(path.Dir(filename), "../barreldb")
 
 	if flag.Lookup("nodeName") == nil {
 		return filepath.Join(root, "data")

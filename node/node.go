@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
+	"math/rand"
 	"net"
 	"os"
 	"sync"
@@ -60,12 +61,13 @@ func NewNode(opts NodeOpts) (*Node, error) {
 	}
 	if opts.Logger == nil {
 		opts.Logger = log.NewLogfmtLogger(os.Stderr)
-		opts.Logger = log.With(opts.Logger, "addr", opts.ID)
+		opts.Logger = log.With(opts.Logger, "🕰", log.DefaultTimestampUTC)
 	}
 
 	var genesis *types.Block = nil
-	if opts.PrivateKey != nil {
+	if opts.ID == "GENESIS-NODE" {
 		genesis = genesisBlock(opts.PrivateKey)
+		_ = opts.Logger.Log("msg", "🌞 create genesis block")
 	}
 
 	chain, err := core.NewBlockchain(opts.Logger, opts.PrivateKey, genesis)
@@ -105,15 +107,9 @@ func NewNode(opts NodeOpts) (*Node, error) {
 
 	s.TCPTransport.peerCh = peerCh
 
-	// If we dont got any processor from the Node options, we going to use
-	// the Node as default.
 	if s.RPCProcessor == nil {
 		s.RPCProcessor = s
 	}
-
-	//if s.isValidator {
-	//	go s.mine()
-	//}
 
 	return s, nil
 }
@@ -186,8 +182,8 @@ free:
 	_ = n.Logger.Log("msg", "Node is shutting down")
 }
 
-func (n *Node) mineUsingProofOfRandom() error {
-	_ = n.Logger.Log("msg", "Starting validator loop", "blockTime", n.BlockTime)
+func (n *Node) mine() error {
+	_ = n.Logger.Log("msg", "start mining using POR(proof of random)", "blockTime", n.BlockTime)
 
 	for {
 		//height, err := n.chain.ReadLastBlockHeight()
@@ -204,8 +200,6 @@ func (n *Node) mineUsingProofOfRandom() error {
 		if err := n.sealBlock(); err != nil {
 			_ = n.Logger.Log("sealing block error", err)
 		}
-
-		_ = n.Logger.Log("msg", "🍀 block mining success")
 	}
 }
 
@@ -224,6 +218,45 @@ func (n *Node) ProcessMessage(msg *DecodedMessage) error {
 	case *BlockResponseMessage:
 		return n.processBlockResponseMessage(msg.From, t)
 	}
+
+	return nil
+}
+
+func (n *Node) processBlock(b *types.Block) error {
+	s := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(s)
+
+	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(6))*time.Second)
+	if err := n.chain.AddBlock(b); err != nil {
+		n.Logger.Log("error", err.Error())
+		return err
+	}
+
+	go n.broadcastBlock(b)
+
+	return nil
+}
+
+func (n *Node) processTransaction(tx *types.Transaction) error {
+	hash := tx.GetHash()
+
+	if n.mempool.Contains(hash) {
+		return nil
+	}
+
+	if err := tx.Verify(); err != nil {
+		return err
+	}
+
+	// s.Logger.Log(
+	// 	"msg", "adding new tx to mempool",
+	// 	"hash", hash,
+	// 	"mempoolPending", s.mempool.PendingCount(),
+	// )
+
+	go n.broadcastTx(tx)
+
+	n.mempool.Add(tx)
 
 	return nil
 }
@@ -277,7 +310,13 @@ func (n *Node) sendChainInfoRequestMessage(peer *TCPPeer) error {
 	}
 
 	msg := NewMessage(MessageTypeGetStatus, buf.Bytes())
-	return peer.Send(msg.Bytes())
+
+	if err := peer.Send(msg.Bytes()); err != nil {
+		return err
+	}
+
+	_ = n.Logger.Log("msg", "👋 requesting chain info request message", "to", peer.conn.RemoteAddr())
+	return nil
 }
 
 func (n *Node) broadcast(payload []byte) error {
@@ -332,7 +371,7 @@ func (n *Node) processChainInfoResponseMessage(from net.Addr, data *ChainInfoRes
 	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
 	if data.CurrentHeight <= *height {
 		n.Logger.Log("msg", "already sync", "this node height", height, "network height", data.CurrentHeight, "addr", from)
-		go n.mineUsingProofOfRandom()
+		go n.mine()
 		return nil
 	}
 
@@ -356,7 +395,6 @@ func (n *Node) processChainInfoRequestMessage(from net.Addr) error {
 		temp := int32(-1)
 		height = &temp
 	}
-
 	return n.sendChainInfoResponseMessage(from, *height)
 }
 
@@ -382,42 +420,6 @@ func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
 	msg := NewMessage(MessageTypeStatus, buf.Bytes())
 
 	return peer.Send(msg.Bytes())
-}
-
-func (n *Node) processBlock(b *types.Block) error {
-	n.miningTicker.Reset(n.BlockTime)
-	if err := n.chain.AddBlock(b); err != nil {
-		n.Logger.Log("error", err.Error())
-		return err
-	}
-
-	go n.broadcastBlock(b)
-
-	return nil
-}
-
-func (n *Node) processTransaction(tx *types.Transaction) error {
-	hash := tx.GetHash()
-
-	if n.mempool.Contains(hash) {
-		return nil
-	}
-
-	if err := tx.Verify(); err != nil {
-		return err
-	}
-
-	// s.Logger.Log(
-	// 	"msg", "adding new tx to mempool",
-	// 	"hash", hash,
-	// 	"mempoolPending", s.mempool.PendingCount(),
-	// )
-
-	go n.broadcastTx(tx)
-
-	n.mempool.Add(tx)
-
-	return nil
 }
 
 // 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
@@ -491,6 +493,8 @@ func (n *Node) sealBlock() error {
 		return err
 	}
 
+	_ = n.Logger.Log("msg", "🍀 block mining success")
+
 	if err := n.chain.AddBlock(block); err != nil {
 		return err
 	}
@@ -527,6 +531,5 @@ func genesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 	if err := b.Sign(*privateKey); err != nil {
 		panic(err)
 	}
-
 	return b
 }
