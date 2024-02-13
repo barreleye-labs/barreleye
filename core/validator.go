@@ -29,8 +29,7 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 
 	lastBlockHeight, err := v.bc.ReadLastBlockHeight()
 
-	if *lastBlockHeight > b.Height {
-		//return fmt.Errorf("chain already contains block (%d) with hash (%s)", b.Height, b.Hash(BlockHasher{}))
+	if *lastBlockHeight >= b.Height {
 		return ErrBlockKnown
 	}
 
