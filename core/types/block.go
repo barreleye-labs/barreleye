@@ -19,6 +19,14 @@ type Header struct {
 	Timestamp     int64
 }
 
+func (h *Header) Decode(dec Decoder[*Header]) error {
+	return dec.Decode(h)
+}
+
+func (h *Header) Encode(enc Encoder[*Header]) error {
+	return enc.Encode(h)
+}
+
 func (h *Header) Bytes() []byte {
 	buf := &bytes.Buffer{}
 	enc := gob.NewEncoder(buf)
@@ -70,13 +78,13 @@ func (b *Block) AddTransaction(tx *Transaction) {
 	b.DataHash = hash
 }
 
-func (b *Block) Sign(privKey crypto.PrivateKey) error {
-	sig, err := privKey.Sign(b.GetHash().ToSlice())
+func (b *Block) Sign(privateKey crypto.PrivateKey) error {
+	sig, err := privateKey.Sign(b.GetHash().ToSlice())
 	if err != nil {
 		return err
 	}
 
-	b.Validator = privKey.PublicKey()
+	b.Validator = privateKey.PublicKey()
 	b.Signature = sig
 
 	return nil
