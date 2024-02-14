@@ -225,7 +225,7 @@ func (n *Node) processBlock(b *types.Block) error {
 	s := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(s)
 
-	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(10))*time.Second)
+	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(2))*time.Second)
 	if err := n.chain.AddBlock(b); err != nil {
 		n.Logger.Log("error", err.Error())
 		return err
@@ -346,7 +346,7 @@ func (n *Node) processBlockResponseMessage(from net.Addr, data *BlockResponseMes
 	}
 
 	if n.peersBlockHeightUntilSync > data.Block.Height {
-		if err := n.requestBlock(from, data.Block.Height+1); err != nil {
+		if err := n.sendBlockRequestMessage(from, data.Block.Height+1); err != nil {
 			return err
 		}
 	} else if n.peersBlockHeightUntilSync == data.Block.Height {
@@ -376,7 +376,7 @@ func (n *Node) processChainInfoResponseMessage(from net.Addr, data *ChainInfoRes
 
 	n.peersBlockHeightUntilSync = data.CurrentHeight
 
-	if err = n.requestBlock(from, *height+1); err != nil {
+	if err = n.sendBlockRequestMessage(from, *height+1); err != nil {
 		return err
 	}
 
@@ -418,7 +418,7 @@ func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
 }
 
 // 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
-func (n *Node) requestBlock(peerAddr net.Addr, blockNumber int32) error {
+func (n *Node) sendBlockRequestMessage(peerAddr net.Addr, blockNumber int32) error {
 	_ = n.Logger.Log("msg", "👋 requesting block height from", blockNumber)
 
 	blockRequestMessage := &BlockRequestMessage{
