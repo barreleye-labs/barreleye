@@ -122,5 +122,11 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 	if err = bc.db.InsertAccountWithAddress(fromAccount.Address, fromAccount); err != nil {
 		return err
 	}
+
+	_ = bc.logger.Log(
+		"msg", "handle native token transfer",
+		"from", fromAccount.Address,
+		"to", toAccount.Address,
+		"value", amount)
 	return nil
 }

@@ -225,7 +225,7 @@ func (n *Node) processBlock(b *types.Block) error {
 	s := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(s)
 
-	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(6))*time.Second)
+	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(2))*time.Second)
 	if err := n.chain.AddBlock(b); err != nil {
 		n.Logger.Log("error", err.Error())
 		return err
@@ -466,20 +466,20 @@ func (n *Node) broadcastTx(tx *types.Transaction) error {
 }
 
 func (n *Node) sealBlock() error {
-	if n.chain.Height() < 0 {
-		return fmt.Errorf("can not seal the block without genesis block")
-	}
-
-	currentHeader, err := n.chain.GetHeader(n.chain.Height())
+	lastHeader, err := n.chain.ReadLastHeader()
 	if err != nil {
 		return err
+	}
+
+	if lastHeader == nil {
+		return fmt.Errorf("can not seal the block without genesis block")
 	}
 
 	// 우선은 멤풀에 있는 모든 트랜잭션을 블록에 담고 추후 수정 예정.
 	// 트랜잭션을 아직 구체화하지 않았기 때문.
 	txx := n.mempool.Pending()
 
-	block, err := types.NewBlockFromPrevHeader(currentHeader, txx)
+	block, err := types.NewBlockFromPrevHeader(lastHeader, txx)
 	if err != nil {
 		return err
 	}

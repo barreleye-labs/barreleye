@@ -34,10 +34,10 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 	}
 
 	if b.Height != *lastBlockHeight+1 {
-		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(), b.Height, v.bc.Height())
+		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(), b.Height, *lastBlockHeight)
 	}
 
-	prevHeader, err := v.bc.GetHeader(b.Height - 1)
+	prevHeader, err := v.bc.ReadHeaderByHeight(b.Height - 1)
 	if err != nil {
 		return err
 	}
