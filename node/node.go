@@ -225,7 +225,7 @@ func (n *Node) processBlock(b *types.Block) error {
 	s := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(s)
 
-	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(2))*time.Second)
+	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(10))*time.Second)
 	if err := n.chain.AddBlock(b); err != nil {
 		n.Logger.Log("error", err.Error())
 		return err
