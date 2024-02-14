@@ -6,6 +6,10 @@ var (
 	HeightBlockTableName = "height-block"
 	LastBlockTableName   = "lastBlock"
 
+	HashHeaderTableName   = "hash-header"
+	HeightHeaderTableName = "height-header"
+	LastHeaderTableName   = "lastHeader"
+
 	HashTxTableName       = "hash-tx"
 	NumberTxTableName     = "number-tx"
 	LastTxTableName       = "lastTx"
@@ -17,6 +21,10 @@ var (
 	HashBlockPrefix   = "hash-block"
 	HeightBlockPrefix = "height-block"
 	LastBlockPrefix   = "lastBlock"
+
+	HashHeaderPrefix   = "hash-header"
+	HeightHeaderPrefix = "height-header"
+	LastHeaderPrefix   = "lastHeader"
 
 	HashTxPrefix       = "hash-tx"
 	NumberTxPrefix     = "number-tx"

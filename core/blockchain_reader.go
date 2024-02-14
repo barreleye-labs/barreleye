@@ -101,6 +101,87 @@ func (bc *Blockchain) ReadLastBlockHeight() (*int32, error) {
 	return &block.Height, nil
 }
 
+func (bc *Blockchain) ReadHeaderByHash(hash common.Hash) (*types.Header, error) {
+	header, err := bc.db.SelectHeaderByHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return header, nil
+}
+
+func (bc *Blockchain) ReadHeaderByHeight(height int32) (*types.Header, error) {
+	header, err := bc.db.SelectHeaderByHeight(height)
+	if err != nil {
+		return nil, err
+	}
+
+	return header, nil
+}
+
+func (bc *Blockchain) ReadHeaders(page int, size int) ([]*types.Header, error) {
+
+	offset := (page - 1) * size
+
+	lastHeader, err := bc.ReadLastHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	headers := []*types.Header{}
+
+	if lastHeader == nil {
+		return headers, nil
+	}
+
+	lastHeaderHeight := int(lastHeader.Height)
+	start := lastHeaderHeight - offset
+	if start < 0 {
+		return headers, nil
+	}
+
+	end := start - size
+	if end < -1 {
+		end = -1
+	}
+
+	for i := start; i > end; i-- {
+		header, err := bc.ReadHeaderByHeight(int32(i))
+		if err != nil {
+			return nil, err
+		}
+		if header == nil {
+			return nil, fmt.Errorf("header %d is nil", i)
+		}
+		headers = append(headers, header)
+	}
+
+	return headers, nil
+}
+
+func (bc *Blockchain) ReadLastHeader() (*types.Header, error) {
+	header, err := bc.db.SelectLastHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	return header, nil
+}
+
+func (bc *Blockchain) ReadLastHeaderHeight() (*int32, error) {
+	header, err := bc.ReadLastHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	if header == nil {
+		height := int32(-1)
+		return &height, nil
+	}
+
+	return &header.Height, nil
+}
+
 func (bc *Blockchain) ReadTxByHash(hash common.Hash) (*types.Transaction, error) {
 	tx, err := bc.db.SelectTxByHash(hash)
 	if err != nil {

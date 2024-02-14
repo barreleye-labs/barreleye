@@ -26,6 +26,27 @@ func (bc *Blockchain) WriteLastBlock(block *types.Block) error {
 	return nil
 }
 
+func (bc *Blockchain) WriteHeaderWithHash(hash common.Hash, header *types.Header) error {
+	if err := bc.db.InsertHeaderWithHash(hash, header); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (bc *Blockchain) WriteHeaderWithHeight(height int32, header *types.Header) error {
+	if err := bc.db.InsertHeaderWithHeight(height, header); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (bc *Blockchain) WriteLastHeader(header *types.Header) error {
+	if err := bc.db.InsertLastHeader(header); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (bc *Blockchain) WriteTxWithHash(hash common.Hash, tx *types.Transaction) error {
 	if err := bc.db.InsertTxWithHash(hash, tx); err != nil {
 		return err

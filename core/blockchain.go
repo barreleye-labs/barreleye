@@ -57,6 +57,19 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 		return nil, err
 	}
 
+	err = db.CreateTable(barreldb.HashHeaderTableName, barreldb.HashHeaderPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.HeightHeaderTableName, barreldb.HeightHeaderPrefix)
+	if err != nil {
+		return nil, err
+	}
+	err = db.CreateTable(barreldb.LastHeaderTableName, barreldb.LastHeaderPrefix)
+	if err != nil {
+		return nil, err
+	}
+
 	err = db.CreateTable(barreldb.HashTxTableName, barreldb.HashTxPrefix)
 	if err != nil {
 		return nil, err
@@ -242,6 +255,16 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 		return err
 	}
 	if err := bc.WriteLastBlock(b); err != nil {
+		return err
+	}
+
+	if err := bc.WriteHeaderWithHash(b.GetHash(), b.Header); err != nil {
+		return err
+	}
+	if err := bc.WriteHeaderWithHeight(b.Height, b.Header); err != nil {
+		return err
+	}
+	if err := bc.WriteLastHeader(b.Header); err != nil {
 		return err
 	}
 

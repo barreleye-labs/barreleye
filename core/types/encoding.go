@@ -41,6 +41,34 @@ func (e *GobTxDecoder) Decode(tx *Transaction) error {
 	return gob.NewDecoder(e.r).Decode(tx)
 }
 
+type GobHeaderEncoder struct {
+	w io.Writer
+}
+
+func NewGobHeaderEncoder(w io.Writer) *GobHeaderEncoder {
+	return &GobHeaderEncoder{
+		w: w,
+	}
+}
+
+func (enc *GobHeaderEncoder) Encode(h *Header) error {
+	return gob.NewEncoder(enc.w).Encode(h)
+}
+
+type GobHeaderDecoder struct {
+	r io.Reader
+}
+
+func NewGobHeaderDecoder(r io.Reader) *GobHeaderDecoder {
+	return &GobHeaderDecoder{
+		r: r,
+	}
+}
+
+func (dec *GobHeaderDecoder) Decode(h *Header) error {
+	return gob.NewDecoder(dec.r).Decode(h)
+}
+
 type GobBlockEncoder struct {
 	w io.Writer
 }
@@ -68,6 +96,8 @@ func NewGobBlockDecoder(r io.Reader) *GobBlockDecoder {
 func (dec *GobBlockDecoder) Decode(b *Block) error {
 	return gob.NewDecoder(dec.r).Decode(b)
 }
+
+//////
 
 type GobAccountEncoder struct {
 	w io.Writer
