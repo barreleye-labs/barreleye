@@ -119,6 +119,9 @@ func (bc *Blockchain) SetValidator(v Validator) {
 }
 
 func (bc *Blockchain) AddBlock(b *types.Block) error {
+	bc.lock.Lock()
+	defer bc.lock.Unlock()
+
 	if err := bc.validator.ValidateBlock(b); err != nil {
 		return err
 	}
@@ -160,7 +163,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	// fmt.Printf("%+v\n", bc.accountState.accounts)
 	// fmt.Println("========ACCOUNT STATE==============")
 
-	bc.lock.Lock()
+	//bc.lock.Lock()
 
 	if err := bc.WriteBlockWithHash(b.GetHash(), b); err != nil {
 		return err
@@ -217,7 +220,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 			return err
 		}
 	}
-	bc.lock.Unlock()
+	//bc.lock.Unlock()
 
 	bc.logger.Log(
 		"msg", "🔗 add new block",
