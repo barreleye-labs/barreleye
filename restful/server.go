@@ -17,26 +17,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type TxResponse struct {
-	TxCount uint     `json:"txCount"`
-	Hashes  []string `json:"hashes"`
-}
-
 type APIError struct {
 	Error string
-}
-
-type Block struct {
-	Hash          string `json:"hash"`
-	Version       uint32 `json:"version"`
-	DataHash      string `json:"dataHash"`
-	PrevBlockHash string `json:"prevBlockHash"`
-	Height        int32  `json:"height"`
-	Timestamp     int64  `json:"timestamp"`
-	Validator     string `json:"validator"`
-	Signature     string `json:"signature"`
-
-	TxResponse TxResponse `json:"txResponse"`
 }
 
 type ServerConfig struct {
@@ -100,15 +82,34 @@ func (s *Server) getAccount(c echo.Context) error {
 }
 
 func (s *Server) getLastBlock(c echo.Context) error {
-	block, err := s.bc.ReadLastBlock()
+	result, err := s.bc.ReadLastBlock()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
 
-	if block == nil {
-		c.JSON(http.StatusOK, nil)
+	if result == nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found block").Error()})
 	}
-	return c.JSON(http.StatusOK, intoJSONBlock(block))
+
+	transactions := []string{}
+	for j := 0; j < len(result.Transactions); j++ {
+		transactions = append(transactions, result.Transactions[j].Hash.String())
+	}
+
+	signature := dto.CreateSignature(result.Signature.R.Text(16), result.Signature.S.Text(16))
+
+	block := dto.CreateBlock(
+		result.Hash.String(),
+		result.Version,
+		result.DataHash.String(),
+		result.PrevBlockHash.String(),
+		result.Height,
+		result.Timestamp,
+		result.Validator.Address().String(),
+		signature,
+		uint32(len(result.Transactions)),
+		transactions)
+	return c.JSON(http.StatusOK, dto.CreateBlockResponse(block))
 }
 
 func (s *Server) getTxs(c echo.Context) error {
@@ -132,31 +133,33 @@ func (s *Server) getTxs(c echo.Context) error {
 
 	txs := []dto.Transaction{}
 	for i := 0; i < len(result); i++ {
-		signer := dto.Signer{
-			X: hex.EncodeToString(result[i].Signer.Key.X.Bytes()),
-			Y: hex.EncodeToString(result[i].Signer.Key.Y.Bytes()),
-		}
+		signer := dto.CreateSigner(result[i].Signer.Key.X.Text(16), result[i].Signer.Key.Y.Text(16))
+		signature := dto.CreateSignature(result[i].Signature.R.Text(16), result[i].Signature.S.Text(16))
 
-		signature := dto.Signature{
-			R: hex.EncodeToString(result[i].Signature.R.Bytes()),
-			S: hex.EncodeToString(result[i].Signature.S.Bytes()),
-		}
-
-		tx := dto.Transaction{
-			Hash:      result[i].Hash.String(),
-			Nonce:     hex.EncodeToString(util.Uint64ToBytes(result[i].Nonce)),
-			From:      result[i].From.String(),
-			To:        result[i].To.String(),
-			Value:     hex.EncodeToString(util.Uint64ToBytes(result[i].Value)),
-			Data:      hex.EncodeToString(result[i].Data),
-			Signer:    signer,
-			Signature: signature,
-		}
+		tx := dto.CreateTransaction(
+			result[i].Hash.String(),
+			hex.EncodeToString(util.Uint64ToBytes(result[i].Nonce)),
+			result[i].From.String(),
+			result[i].To.String(),
+			hex.EncodeToString(util.Uint64ToBytes(result[i].Value)),
+			hex.EncodeToString(result[i].Data),
+			signer,
+			signature)
 
 		txs = append(txs, tx)
 	}
 
-	return c.JSON(http.StatusOK, dto.TransactionsResponse{Transactions: txs})
+	lastTxNumber, err := s.bc.ReadLastTxNumber()
+	if err != nil {
+		return err
+	}
+
+	totalCount := uint32(0)
+	if lastTxNumber != nil {
+		totalCount = *lastTxNumber + 1
+	}
+
+	return c.JSON(http.StatusOK, dto.CreateTransactionsResponse(txs, totalCount))
 }
 
 func (s *Server) getBlocks(c echo.Context) error {
@@ -172,35 +175,41 @@ func (s *Server) getBlocks(c echo.Context) error {
 		return fmt.Errorf("failed to convert size type from string to int")
 	}
 
-	blocks, err := s.bc.ReadBlocks(page, size)
+	result, err := s.bc.ReadBlocks(page, size)
 	if err != nil {
 		return fmt.Errorf("failed to get blocks")
 	}
 
-	return c.JSON(http.StatusOK, intoJSONBlocks(blocks))
-}
+	blocks := []dto.Block{}
+	for i := 0; i < len(result); i++ {
+		transactions := []string{}
+		for j := 0; j < len(result[i].Transactions); j++ {
+			transactions = append(transactions, result[i].Transactions[j].Hash.String())
+		}
 
-//func (s *Server) handleGetBlocksByHash(c echo.Context) error {
-//	query := c.QueryParams()
-//
-//	b, err := hex.DecodeString(query["hash"][0])
-//	if err != nil {
-//		return fmt.Errorf("failed to decode string")
-//	}
-//
-//	hash := common.HashFromBytes(b)
-//
-//	size, err := strconv.Atoi(query["size"][0])
-//	if err != nil {
-//		return fmt.Errorf("failed to convert size type from string to int")
-//	}
-//	blocks, err := s.bc.GetBlocks(hash, size)
-//	if err != nil {
-//		return fmt.Errorf("failed to ")
-//	}
-//
-//	return c.JSON(http.StatusOK, intoJSONBlocks(blocks))
-//}
+		signature := dto.CreateSignature(result[i].Signature.R.Text(16), result[i].Signature.S.Text(16))
+
+		block := dto.CreateBlock(
+			result[i].Hash.String(),
+			result[i].Version,
+			result[i].DataHash.String(),
+			result[i].PrevBlockHash.String(),
+			result[i].Height,
+			result[i].Timestamp,
+			result[i].Validator.Address().String(),
+			signature,
+			uint32(len(result[i].Transactions)),
+			transactions)
+
+		blocks = append(blocks, block)
+	}
+
+	lastBlockHeight, err := s.bc.ReadLastBlockHeight()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, dto.CreateBlocksResponse(blocks, uint32(*lastBlockHeight+1)))
+}
 
 func (s *Server) postTx(c echo.Context) error {
 	payload := &dto.TransactionRequest{}
@@ -247,39 +256,21 @@ func (s *Server) postTx(c echo.Context) error {
 
 	s.txChan <- &tx
 
-	return c.JSON(http.StatusOK, dto.TransactionResponse{Transaction: dto.Transaction{
-		Hash:  tx.Hash.String(),
-		Nonce: payload.Nonce,
-		From:  payload.From,
-		To:    payload.To,
-		Value: payload.Value,
-		Data:  payload.Data,
-		Signer: dto.Signer{
-			X: payload.SignerX,
-			Y: payload.SignerY,
-		},
-		Signature: dto.Signature{
-			R: payload.SignatureR,
-			S: payload.SignatureS,
-		},
-	}})
-}
+	signerDTO := dto.CreateSigner(payload.SignerX, payload.SignerY)
+	signatureDTO := dto.CreateSignature(payload.SignatureR, payload.SignatureS)
 
-//func (s *Server) handleGetTx(c echo.Context) error {
-//	hash := c.Param("hash")
-//
-//	b, err := hex.DecodeString(hash)
-//	if err != nil {
-//		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
-//	}
-//
-//	tx, err := s.bc.GetTxByHash(common.HashFromBytes(b))
-//	if err != nil {
-//		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
-//	}
-//
-//	return c.JSON(http.StatusOK, tx)
-//}
+	txDTO := dto.CreateTransaction(
+		tx.Hash.String(),
+		payload.Nonce,
+		payload.From,
+		payload.To,
+		payload.Value,
+		payload.Data,
+		signerDTO,
+		signatureDTO)
+
+	return c.JSON(http.StatusOK, dto.CreateTransactionResponse(txDTO))
+}
 
 func (s *Server) getTx(c echo.Context) error {
 	id := c.Param("id")
@@ -308,111 +299,66 @@ func (s *Server) getTx(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found tx").Error()})
 	}
 
-	signer := dto.Signer{
-		X: hex.EncodeToString(result.Signer.Key.X.Bytes()),
-		Y: hex.EncodeToString(result.Signer.Key.Y.Bytes()),
-	}
+	signer := dto.CreateSigner(result.Signer.Key.X.Text(16), result.Signer.Key.Y.Text(16))
+	signature := dto.CreateSignature(result.Signature.R.Text(16), result.Signature.S.Text(16))
 
-	signature := dto.Signature{
-		R: hex.EncodeToString(result.Signature.R.Bytes()),
-		S: hex.EncodeToString(result.Signature.S.Bytes()),
-	}
+	tx := dto.CreateTransaction(
+		result.Hash.String(),
+		hex.EncodeToString(util.Uint64ToBytes(result.Nonce)),
+		result.From.String(),
+		result.To.String(),
+		hex.EncodeToString(util.Uint64ToBytes(result.Value)),
+		hex.EncodeToString(result.Data),
+		signer,
+		signature)
 
-	tx := dto.Transaction{
-		Hash:      result.Hash.String(),
-		Nonce:     hex.EncodeToString(util.Uint64ToBytes(result.Nonce)),
-		From:      result.From.String(),
-		To:        result.To.String(),
-		Value:     hex.EncodeToString(util.Uint64ToBytes(result.Value)),
-		Data:      hex.EncodeToString(result.Data),
-		Signer:    signer,
-		Signature: signature,
-	}
-
-	return c.JSON(http.StatusOK, dto.TransactionResponse{Transaction: tx})
+	return c.JSON(http.StatusOK, dto.CreateTransactionResponse(tx))
 }
 
 func (s *Server) getBlock(c echo.Context) error {
 	id := c.Param("id")
 
+	var result *types.Block = nil
+
 	height, err := strconv.Atoi(id)
 	if err == nil {
-		block, err := s.bc.ReadBlockByHeight(int32(height))
+		result, err = s.bc.ReadBlockByHeight(int32(height))
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+		}
+	} else {
+		hash, err := hex.DecodeString(id)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 		}
 
-		if block == nil {
-			return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found").Error()})
+		result, err = s.bc.ReadBlockByHash(common.HashFromBytes(hash))
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 		}
-		return c.JSON(http.StatusOK, intoJSONBlock(block))
 	}
 
-	b, err := hex.DecodeString(id)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	if result == nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found block").Error()})
 	}
 
-	block, err := s.bc.ReadBlockByHash(common.HashFromBytes(b))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	transactions := []string{}
+	for j := 0; j < len(result.Transactions); j++ {
+		transactions = append(transactions, result.Transactions[j].Hash.String())
 	}
 
-	if block == nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error: fmt.Errorf("not found").Error()})
-	}
+	signature := dto.CreateSignature(result.Signature.R.Text(16), result.Signature.S.Text(16))
 
-	return c.JSON(http.StatusOK, intoJSONBlock(block))
-}
-
-func intoJSONBlock(block *types.Block) Block {
-	txResponse := TxResponse{
-		TxCount: uint(len(block.Transactions)),
-		Hashes:  make([]string, len(block.Transactions)),
-	}
-
-	for i := 0; i < int(txResponse.TxCount); i++ {
-		txResponse.Hashes[i] = block.Transactions[i].GetHash().String()
-	}
-
-	return Block{
-		Hash:          block.GetHash().String(),
-		Version:       block.Header.Version,
-		Height:        block.Header.Height,
-		DataHash:      block.Header.DataHash.String(),
-		PrevBlockHash: block.PrevBlockHash.String(),
-		Timestamp:     block.Timestamp,
-		Validator:     block.Validator.Address().String(),
-		Signature:     block.Signature.String(),
-		TxResponse:    txResponse,
-	}
-}
-
-func intoJSONBlocks(blocks []*types.Block) []Block {
-	value := []Block{}
-	for i := 0; i < len(blocks); i++ {
-		txResponse := TxResponse{
-			TxCount: uint(len(blocks[i].Transactions)),
-			Hashes:  make([]string, len(blocks[i].Transactions)),
-		}
-
-		for j := 0; j < int(txResponse.TxCount); j++ {
-			txResponse.Hashes[j] = blocks[i].Transactions[j].GetHash().String()
-		}
-
-		b := Block{
-			Hash:          blocks[i].GetHash().String(),
-			Version:       blocks[i].Header.Version,
-			Height:        blocks[i].Header.Height,
-			DataHash:      blocks[i].Header.DataHash.String(),
-			PrevBlockHash: blocks[i].PrevBlockHash.String(),
-			Timestamp:     blocks[i].Timestamp,
-			Validator:     blocks[i].Validator.Address().String(),
-			Signature:     blocks[i].Signature.String(),
-			TxResponse:    txResponse,
-		}
-
-		value = append(value, b)
-	}
-	return value
+	block := dto.CreateBlock(
+		result.Hash.String(),
+		result.Version,
+		result.DataHash.String(),
+		result.PrevBlockHash.String(),
+		result.Height,
+		result.Timestamp,
+		result.Validator.Address().String(),
+		signature,
+		uint32(len(result.Transactions)),
+		transactions)
+	return c.JSON(http.StatusOK, dto.CreateBlockResponse(block))
 }
