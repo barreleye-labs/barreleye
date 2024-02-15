@@ -7,7 +7,7 @@ import (
 )
 
 func (bc *Blockchain) ReadBlockByHash(hash common.Hash) (*types.Block, error) {
-	block, err := bc.db.SelectBlockByHash(hash)
+	block, err := bc.db.SelectHashBlock(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -16,7 +16,7 @@ func (bc *Blockchain) ReadBlockByHash(hash common.Hash) (*types.Block, error) {
 }
 
 func (bc *Blockchain) ReadBlockByHeight(height int32) (*types.Block, error) {
-	block, err := bc.db.SelectBlockByHeight(height)
+	block, err := bc.db.SelectHeightBlock(height)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (bc *Blockchain) ReadLastBlockHeight() (*int32, error) {
 }
 
 func (bc *Blockchain) ReadHeaderByHash(hash common.Hash) (*types.Header, error) {
-	header, err := bc.db.SelectHeaderByHash(hash)
+	header, err := bc.db.SelectHashHeader(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (bc *Blockchain) ReadHeaderByHash(hash common.Hash) (*types.Header, error) 
 }
 
 func (bc *Blockchain) ReadHeaderByHeight(height int32) (*types.Header, error) {
-	header, err := bc.db.SelectHeaderByHeight(height)
+	header, err := bc.db.SelectHeightHeader(height)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (bc *Blockchain) ReadLastHeaderHeight() (*int32, error) {
 }
 
 func (bc *Blockchain) ReadTxByHash(hash common.Hash) (*types.Transaction, error) {
-	tx, err := bc.db.SelectTxByHash(hash)
+	tx, err := bc.db.SelectHashTx(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (bc *Blockchain) ReadTxByHash(hash common.Hash) (*types.Transaction, error)
 }
 
 func (bc *Blockchain) ReadTxByNumber(number uint32) (*types.Transaction, error) {
-	tx, err := bc.db.SelectTxByNumber(number)
+	tx, err := bc.db.SelectNumberTx(number)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (bc *Blockchain) ReadLastTxNumber() (*uint32, error) {
 }
 
 func (bc *Blockchain) ReadAccountByAddress(address common.Address) (*types.Account, error) {
-	account, err := bc.db.SelectAccountByAddress(address)
+	account, err := bc.db.SelectAddressAccount(address)
 	if err != nil {
 		return nil, err
 	}

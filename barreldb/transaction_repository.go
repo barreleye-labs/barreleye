@@ -10,7 +10,7 @@ import (
 )
 
 // HashTx Repository
-func (barrelDB *BarrelDatabase) InsertTxWithHash(hash common.Hash, tx *types.Transaction) error {
+func (barrelDB *BarrelDatabase) InsertHashTx(hash common.Hash, tx *types.Transaction) error {
 	buf := &bytes.Buffer{}
 	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
 		return err
@@ -22,14 +22,14 @@ func (barrelDB *BarrelDatabase) InsertTxWithHash(hash common.Hash, tx *types.Tra
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) DeleteTxByHash(hash common.Hash) error {
+func (barrelDB *BarrelDatabase) DeleteHashTx(hash common.Hash) error {
 	if err := barrelDB.GetTable(HashTxTableName).Delete(hash.ToSlice()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) SelectTxByHash(hash common.Hash) (*types.Transaction, error) {
+func (barrelDB *BarrelDatabase) SelectHashTx(hash common.Hash) (*types.Transaction, error) {
 	data, err := barrelDB.GetTable(HashTxTableName).Get(hash.ToSlice())
 	if err != nil {
 		if err.Error() != common.LevelDBNotFoundError {
@@ -48,7 +48,7 @@ func (barrelDB *BarrelDatabase) SelectTxByHash(hash common.Hash) (*types.Transac
 }
 
 // NumberTx Repository
-func (barrelDB *BarrelDatabase) InsertTxWithNumber(number uint32, tx *types.Transaction) error {
+func (barrelDB *BarrelDatabase) InsertNumberTx(number uint32, tx *types.Transaction) error {
 	buf := &bytes.Buffer{}
 	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
 		return err
@@ -60,14 +60,14 @@ func (barrelDB *BarrelDatabase) InsertTxWithNumber(number uint32, tx *types.Tran
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) DeleteTxByNumber(number int32) error {
+func (barrelDB *BarrelDatabase) DeleteNumberTx(number int32) error {
 	if err := barrelDB.GetTable(NumberTxTableName).Delete([]byte(strconv.Itoa(int(number)))); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) SelectTxByNumber(number uint32) (*types.Transaction, error) {
+func (barrelDB *BarrelDatabase) SelectNumberTx(number uint32) (*types.Transaction, error) {
 	data, err := barrelDB.GetTable(NumberTxTableName).Get([]byte(strconv.Itoa(int(number))))
 	if err != nil {
 		if err.Error() != common.LevelDBNotFoundError {
