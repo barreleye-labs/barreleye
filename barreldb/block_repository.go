@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// HashBlock Repository
 func (barrelDB *BarrelDatabase) InsertBlockWithHash(hash common.Hash, block *types.Block) error {
 	buf := &bytes.Buffer{}
 	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
@@ -19,25 +20,8 @@ func (barrelDB *BarrelDatabase) InsertBlockWithHash(hash common.Hash, block *typ
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height int32, block *types.Block) error {
-	buf := &bytes.Buffer{}
-	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
-		return err
-	}
-
-	if err := barrelDB.GetTable(HeightBlockTableName).Put([]byte(strconv.Itoa(int(height))), buf.Bytes()); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (barrelDB *BarrelDatabase) InsertLastBlock(block *types.Block) error {
-	buf := &bytes.Buffer{}
-	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
-		return err
-	}
-
-	if err := barrelDB.GetTable(LastBlockTableName).Put([]byte{}, buf.Bytes()); err != nil {
+func (barrelDB *BarrelDatabase) DeleteBlockByHash(hash common.Hash) error {
+	if err := barrelDB.GetTable(HashBlockTableName).Delete(hash.ToSlice()); err != nil {
 		return err
 	}
 	return nil
@@ -61,6 +45,26 @@ func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Bloc
 	return block, nil
 }
 
+// HeightBlock Repository
+func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height int32, block *types.Block) error {
+	buf := &bytes.Buffer{}
+	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
+		return err
+	}
+
+	if err := barrelDB.GetTable(HeightBlockTableName).Put([]byte(strconv.Itoa(int(height))), buf.Bytes()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (barrelDB *BarrelDatabase) DeleteBlockByHeight(height int32) error {
+	if err := barrelDB.GetTable(HeightBlockTableName).Delete([]byte(strconv.Itoa(int(height)))); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (barrelDB *BarrelDatabase) SelectBlockByHeight(height int32) (*types.Block, error) {
 	data, err := barrelDB.GetTable(HeightBlockTableName).Get([]byte(strconv.Itoa(int(height))))
 	if err != nil {
@@ -77,6 +81,26 @@ func (barrelDB *BarrelDatabase) SelectBlockByHeight(height int32) (*types.Block,
 	}
 
 	return block, nil
+}
+
+// LastBlock Repository
+func (barrelDB *BarrelDatabase) InsertLastBlock(block *types.Block) error {
+	buf := &bytes.Buffer{}
+	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
+		return err
+	}
+
+	if err := barrelDB.GetTable(LastBlockTableName).Put([]byte{}, buf.Bytes()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (barrelDB *BarrelDatabase) DeleteLastBlock() error {
+	if err := barrelDB.GetTable(LastBlockTableName).Delete([]byte{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (barrelDB *BarrelDatabase) SelectLastBlock() (*types.Block, error) {

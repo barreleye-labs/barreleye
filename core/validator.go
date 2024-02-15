@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/core/types"
@@ -27,14 +28,34 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 		return nil
 	}
 
-	lastBlockHeight, err := v.bc.ReadLastBlockHeight()
+	lastBlock, err := v.bc.ReadLastBlock()
+	if err != nil {
+		return err
+	}
 
-	if *lastBlockHeight >= b.Height {
+	if lastBlock == nil {
+		return fmt.Errorf("lastBlock is nil")
+	}
+
+	if lastBlock.Height > b.Height {
 		return ErrBlockKnown
 	}
 
-	if b.Height != *lastBlockHeight+1 {
-		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(), b.Height, *lastBlockHeight)
+	if err = b.Verify(); err != nil {
+		return err
+	}
+
+	// 블록 높이가 같은데 해시가 다를 경우 기존 블록을 버리고 받은 블록으로 덮어 씌움.
+	if lastBlock.Height == b.Height {
+		if lastBlock.Hash.String() != b.Hash.String() && bytes.Compare(lastBlock.Hash.ToSlice(), b.Hash.ToSlice()) == 1 {
+			v.bc.logger.Log("msg", "block replacement")
+			return nil
+		}
+		return ErrBlockKnown
+	}
+
+	if lastBlock.Height+1 != b.Height {
+		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(), b.Height, lastBlock.Height)
 	}
 
 	prevHeader, err := v.bc.ReadHeaderByHeight(b.Height - 1)
@@ -46,10 +67,6 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 
 	if hash != b.PrevBlockHash {
 		return fmt.Errorf("the hash of the previous block (%s) is invalid", b.PrevBlockHash)
-	}
-
-	if err := b.Verify(); err != nil {
-		return err
 	}
 
 	return nil

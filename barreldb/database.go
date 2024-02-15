@@ -25,9 +25,6 @@ func (barrelDB *BarrelDatabase) Close() error {
 	return err
 }
 
-func (barrelDB *BarrelDatabase) GetT() map[string]*Table {
-	return barrelDB.tables
-}
 func (barrelDB *BarrelDatabase) CreateTable(name string, prefix string) error {
 	table := NewTable(barrelDB, prefix)
 	barrelDB.tables[name] = table
@@ -49,6 +46,10 @@ func (barrelDB *BarrelDatabase) Has(key []byte) (bool, error) {
 
 func (barrelDB *BarrelDatabase) Put(key []byte, value []byte) error {
 	return barrelDB.db.Put(key, value, nil)
+}
+
+func (barrelDB *BarrelDatabase) Delete(key []byte) error {
+	return barrelDB.db.Delete(key, nil)
 }
 
 func DefaultDataDir() string {

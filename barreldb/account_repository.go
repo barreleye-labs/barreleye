@@ -6,6 +6,7 @@ import (
 	"github.com/barreleye-labs/barreleye/core/types"
 )
 
+// AddressAccount Repository
 func (barrelDB *BarrelDatabase) InsertAccountWithAddress(address common.Address, account *types.Account) error {
 	buf := &bytes.Buffer{}
 	if err := account.Encode(types.NewGobAccountEncoder(buf)); err != nil {
@@ -16,6 +17,13 @@ func (barrelDB *BarrelDatabase) InsertAccountWithAddress(address common.Address,
 		return err
 	}
 
+	return nil
+}
+
+func (barrelDB *BarrelDatabase) DeleteAccountByAddress(address common.Address) error {
+	if err := barrelDB.GetTable(AddressAccountTableName).Delete(address.ToSlice()); err != nil {
+		return err
+	}
 	return nil
 }
 
