@@ -7,7 +7,7 @@ import (
 )
 
 // AddressAccount Repository
-func (barrelDB *BarrelDatabase) InsertAccountWithAddress(address common.Address, account *types.Account) error {
+func (barrelDB *BarrelDatabase) InsertAddressAccount(address common.Address, account *types.Account) error {
 	buf := &bytes.Buffer{}
 	if err := account.Encode(types.NewGobAccountEncoder(buf)); err != nil {
 		return err
@@ -20,14 +20,14 @@ func (barrelDB *BarrelDatabase) InsertAccountWithAddress(address common.Address,
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) DeleteAccountByAddress(address common.Address) error {
+func (barrelDB *BarrelDatabase) DeleteAddressAccount(address common.Address) error {
 	if err := barrelDB.GetTable(AddressAccountTableName).Delete(address.ToSlice()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) SelectAccountByAddress(address common.Address) (*types.Account, error) {
+func (barrelDB *BarrelDatabase) SelectAddressAccount(address common.Address) (*types.Account, error) {
 	data, err := barrelDB.GetTable(AddressAccountTableName).Get(address.ToSlice())
 	if err != nil {
 		if err.Error() != common.LevelDBNotFoundError {

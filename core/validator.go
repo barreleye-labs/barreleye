@@ -49,6 +49,12 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 	if lastBlock.Height == b.Height {
 		if lastBlock.Hash.String() != b.Hash.String() && bytes.Compare(lastBlock.Hash.ToSlice(), b.Hash.ToSlice()) == 1 {
 			v.bc.logger.Log("msg", "block replacement")
+			if err = v.bc.RemoveLastHeader(); err != nil {
+				return err
+			}
+			if err = v.bc.RemoveLastBlock(); err != nil {
+				return err
+			}
 			return nil
 		}
 		return ErrBlockKnown

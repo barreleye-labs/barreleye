@@ -8,7 +8,7 @@ import (
 )
 
 // HashBlock Repository
-func (barrelDB *BarrelDatabase) InsertBlockWithHash(hash common.Hash, block *types.Block) error {
+func (barrelDB *BarrelDatabase) InsertHashBlock(hash common.Hash, block *types.Block) error {
 	buf := &bytes.Buffer{}
 	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
 		return err
@@ -20,14 +20,14 @@ func (barrelDB *BarrelDatabase) InsertBlockWithHash(hash common.Hash, block *typ
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) DeleteBlockByHash(hash common.Hash) error {
+func (barrelDB *BarrelDatabase) DeleteHashBlock(hash common.Hash) error {
 	if err := barrelDB.GetTable(HashBlockTableName).Delete(hash.ToSlice()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Block, error) {
+func (barrelDB *BarrelDatabase) SelectHashBlock(hash common.Hash) (*types.Block, error) {
 	data, err := barrelDB.GetTable(HashBlockTableName).Get(hash.ToSlice())
 	if err != nil {
 		if err.Error() != common.LevelDBNotFoundError {
@@ -46,7 +46,7 @@ func (barrelDB *BarrelDatabase) SelectBlockByHash(hash common.Hash) (*types.Bloc
 }
 
 // HeightBlock Repository
-func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height int32, block *types.Block) error {
+func (barrelDB *BarrelDatabase) InsertHeightBlock(height int32, block *types.Block) error {
 	buf := &bytes.Buffer{}
 	if err := block.Encode(types.NewGobBlockEncoder(buf)); err != nil {
 		return err
@@ -58,14 +58,14 @@ func (barrelDB *BarrelDatabase) InsertBlockWithHeight(height int32, block *types
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) DeleteBlockByHeight(height int32) error {
+func (barrelDB *BarrelDatabase) DeleteHeightBlock(height int32) error {
 	if err := barrelDB.GetTable(HeightBlockTableName).Delete([]byte(strconv.Itoa(int(height)))); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) SelectBlockByHeight(height int32) (*types.Block, error) {
+func (barrelDB *BarrelDatabase) SelectHeightBlock(height int32) (*types.Block, error) {
 	data, err := barrelDB.GetTable(HeightBlockTableName).Get([]byte(strconv.Itoa(int(height))))
 	if err != nil {
 		if err.Error() != common.LevelDBNotFoundError {
