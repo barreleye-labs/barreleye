@@ -26,7 +26,7 @@ func (t *Table) Put(key []byte, value []byte) error {
 	return t.DB.Put(append([]byte(t.Prefix), key...), value)
 }
 
-//// Delete removes the given prefixed key from the database.
-//func (t *Table) Delete(key []byte) error {
-//	return t.db.Delete(append([]byte(t.prefix), key...))
-//}
+// Delete removes the given prefixed key from the database.
+func (t *Table) Delete(key []byte) error {
+	return t.DB.Delete(append([]byte(t.Prefix), key...))
+}

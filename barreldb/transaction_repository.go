@@ -9,6 +9,7 @@ import (
 	"strconv"
 )
 
+// HashTx Repository
 func (barrelDB *BarrelDatabase) InsertTxWithHash(hash common.Hash, tx *types.Transaction) error {
 	buf := &bytes.Buffer{}
 	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
@@ -21,34 +22,8 @@ func (barrelDB *BarrelDatabase) InsertTxWithHash(hash common.Hash, tx *types.Tra
 	return nil
 }
 
-func (barrelDB *BarrelDatabase) InsertTxWithNumber(number uint32, tx *types.Transaction) error {
-	buf := &bytes.Buffer{}
-	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
-		return err
-	}
-
-	if err := barrelDB.GetTable(NumberTxTableName).Put([]byte(strconv.Itoa(int(number))), buf.Bytes()); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (barrelDB *BarrelDatabase) InsertLastTx(tx *types.Transaction) error {
-	buf := &bytes.Buffer{}
-	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
-		return err
-	}
-
-	if err := barrelDB.GetTable(LastTxTableName).Put([]byte{}, buf.Bytes()); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (barrelDB *BarrelDatabase) InsertLastTxNumber(number uint32) error {
-	b := make([]byte, 4)
-	binary.BigEndian.PutUint32(b, number)
-	if err := barrelDB.GetTable(LastTxNumberTableName).Put([]byte{}, b); err != nil {
+func (barrelDB *BarrelDatabase) DeleteTxByHash(hash common.Hash) error {
+	if err := barrelDB.GetTable(HashTxTableName).Delete(hash.ToSlice()); err != nil {
 		return err
 	}
 	return nil
@@ -72,6 +47,26 @@ func (barrelDB *BarrelDatabase) SelectTxByHash(hash common.Hash) (*types.Transac
 	return tx, nil
 }
 
+// NumberTx Repository
+func (barrelDB *BarrelDatabase) InsertTxWithNumber(number uint32, tx *types.Transaction) error {
+	buf := &bytes.Buffer{}
+	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
+		return err
+	}
+
+	if err := barrelDB.GetTable(NumberTxTableName).Put([]byte(strconv.Itoa(int(number))), buf.Bytes()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (barrelDB *BarrelDatabase) DeleteTxByNumber(number int32) error {
+	if err := barrelDB.GetTable(NumberTxTableName).Delete([]byte(strconv.Itoa(int(number)))); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (barrelDB *BarrelDatabase) SelectTxByNumber(number uint32) (*types.Transaction, error) {
 	data, err := barrelDB.GetTable(NumberTxTableName).Get([]byte(strconv.Itoa(int(number))))
 	if err != nil {
@@ -90,6 +85,26 @@ func (barrelDB *BarrelDatabase) SelectTxByNumber(number uint32) (*types.Transact
 	return tx, nil
 }
 
+// LastTx Repository
+func (barrelDB *BarrelDatabase) InsertLastTx(tx *types.Transaction) error {
+	buf := &bytes.Buffer{}
+	if err := tx.Encode(types.NewGobTxEncoder(buf)); err != nil {
+		return err
+	}
+
+	if err := barrelDB.GetTable(LastTxTableName).Put([]byte{}, buf.Bytes()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (barrelDB *BarrelDatabase) DeleteLastTx() error {
+	if err := barrelDB.GetTable(LastTxTableName).Delete([]byte{}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (barrelDB *BarrelDatabase) SelectLastTx() (*types.Transaction, error) {
 	data, err := barrelDB.GetTable(LastTxTableName).Get([]byte{})
 	if err != nil {
@@ -106,6 +121,23 @@ func (barrelDB *BarrelDatabase) SelectLastTx() (*types.Transaction, error) {
 	}
 
 	return tx, nil
+}
+
+// LastTxNumber Repository
+func (barrelDB *BarrelDatabase) InsertLastTxNumber(number uint32) error {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, number)
+	if err := barrelDB.GetTable(LastTxNumberTableName).Put([]byte{}, b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (barrelDB *BarrelDatabase) DeleteLastTxNumber() error {
+	if err := barrelDB.GetTable(LastTxNumberTableName).Delete([]byte{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (barrelDB *BarrelDatabase) SelectLastTxNumber() (*uint32, error) {
