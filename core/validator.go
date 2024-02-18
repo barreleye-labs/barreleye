@@ -55,6 +55,9 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 			if err = v.bc.RemoveLastBlock(); err != nil {
 				return err
 			}
+			if err = v.bc.CancelReward(lastBlock.Validator.Address()); err != nil {
+				return err
+			}
 			return nil
 		}
 		return ErrBlockKnown

@@ -43,17 +43,20 @@ func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transac
 func (s *Server) Start() error {
 	e := echo.New()
 
-	//e.GET("/block/:hashorid", s.handleGetBlock)
 	e.GET("/blocks/:id", s.getBlock)
 	e.GET("/blocks", s.getBlocks)
 	e.GET("/last-block", s.getLastBlock)
 	e.GET("txs/:id", s.getTx)
 	e.GET("txs", s.getTxs)
 	e.GET("/accounts/:address", s.getAccount)
-	//e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/txs", s.postTx)
+	e.POST("/faucet", s.requestSomeCoin)
 
 	return e.Start(s.ListenAddr)
+}
+
+func (s *Server) requestSomeCoin(c echo.Context) error {
+	return nil
 }
 
 func (s *Server) getAccount(c echo.Context) error {
