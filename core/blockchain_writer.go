@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/config"
 	"github.com/barreleye-labs/barreleye/core/types"
 )
 
@@ -209,5 +210,19 @@ func (bc *Blockchain) RemoveLastHeader() error {
 		return err
 	}
 
+	return nil
+}
+
+func (bc *Blockchain) CancelReward(address common.Address) error {
+	if err := bc.db.DecreaseAccountBalance(address, uint64(config.BlockReward)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (bc *Blockchain) GiveReward(address common.Address) error {
+	if err := bc.db.IncreaseAccountBalance(address, uint64(config.BlockReward)); err != nil {
+		return err
+	}
 	return nil
 }

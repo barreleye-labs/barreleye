@@ -502,19 +502,19 @@ func (n *Node) sealBlock() error {
 }
 
 func CreateGenesisBlock(privateKey *crypto.PrivateKey) *types.Block {
-	coinbase := privateKey.PublicKey()
+	//coinbase := privateKey.PublicKey()
 
-	tx := &types.Transaction{
-		Nonce: 171, //ab
-		From:  coinbase.Address(),
-		To:    coinbase.Address(),
-		Value: 171, //ab
-		Data:  []byte{171},
-	}
+	//tx := &types.Transaction{
+	//	Nonce: 171, //ab
+	//	From:  coinbase.Address(),
+	//	To:    coinbase.Address(),
+	//	Value: 171, //ab
+	//	Data:  []byte{171},
+	//}
 
-	if err := tx.Sign(*privateKey); err != nil {
-		panic(err)
-	}
+	//if err := tx.Sign(*privateKey); err != nil {
+	//	panic(err)
+	//}
 
 	header := &types.Header{
 		Version:   1,
@@ -524,9 +524,9 @@ func CreateGenesisBlock(privateKey *crypto.PrivateKey) *types.Block {
 
 	b, _ := types.NewBlock(header, nil)
 
-	b.Transactions = append(b.Transactions, tx)
-	hash, _ := types.CalculateDataHash(b.Transactions)
-	b.DataHash = hash
+	//b.Transactions = append(b.Transactions, tx)
+	//hash, _ := types.CalculateDataHash(b.Transactions)
+	//b.DataHash = hash
 
 	if err := b.Sign(*privateKey); err != nil {
 		panic(err)

@@ -20,22 +20,7 @@ type Blockchain struct {
 }
 
 func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.Block) (*Blockchain, error) {
-	accountState := NewAccountState()
-
-	if genesis != nil {
-		coinbase := privateKey.PublicKey()
-		accountState.CreateAccount(coinbase.Address())
-	}
-
 	db, _ := barreldb.New()
-
-	/*
-		bc 객체가 없는 영역에서 db 활용 Sample
-
-		_ = db.CreateTable("block", barreldb.BlockPrefix)
-		_ = db.CreateBlock("kim", "youngmin")
-		data, _ := db.GetBlock("kim")
-	*/
 
 	err := db.CreateTable(barreldb.HashBlockTableName, barreldb.HashBlockPrefix)
 	if err != nil {
@@ -95,7 +80,6 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 
 	if privateKey != nil {
 		coinbase := privateKey.PublicKey()
-		accountState.CreateAccount(coinbase.Address())
 
 		coinbaseAccount := types.CreateAccount(coinbase.Address())
 		_, err = bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount)
@@ -146,7 +130,6 @@ func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 }
 
 func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
-	bc.stateLock.Lock()
 	for i := 0; i < len(b.Transactions); i++ {
 		if err := bc.handleTransaction(b.Transactions[i]); err != nil {
 			_ = bc.logger.Log("error", err.Error())
@@ -157,13 +140,6 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 			continue
 		}
 	}
-	bc.stateLock.Unlock()
-
-	// fmt.Println("========ACCOUNT STATE==============")
-	// fmt.Printf("%+v\n", bc.accountState.accounts)
-	// fmt.Println("========ACCOUNT STATE==============")
-
-	//bc.lock.Lock()
 
 	if err := bc.WriteBlockWithHash(b.GetHash(), b); err != nil {
 		return err
@@ -185,16 +161,9 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 		return err
 	}
 
-	//data, _ := bc.ReadBlockByHash(b.GetHash(types.BlockHasher{}))
-	//val := hexutil.Encode(data.Hash.ToSlice())
-	//fmt.Println("hashblock::: ", val)
-	//fmt.Println("fefefefefk::: ", data.Hash.String())
-
-	//data, _ = bc.ReadBlockByHeight(b.Height)
-	//fmt.Println("heightblock::: ", data)
-
-	//data, _ = bc.ReadLastBlock()
-	//fmt.Println("Lastblock::: ", data)
+	if err := bc.GiveReward(b.Validator.Address()); err != nil {
+		return err
+	}
 
 	for _, tx := range b.Transactions {
 		nextTxNumber := uint32(0)
@@ -220,7 +189,6 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 			return err
 		}
 	}
-	//bc.lock.Unlock()
 
 	bc.logger.Log(
 		"msg", "🔗 add new block",
@@ -229,5 +197,5 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 		"transactions", len(b.Transactions),
 	)
 
-	return bc.store.Put(b)
+	return nil
 }
