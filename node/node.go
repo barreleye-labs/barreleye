@@ -486,7 +486,7 @@ func (n *Node) sealBlock() error {
 			i--
 			continue
 		}
-		///다시봐야함
+
 		accountNonce, err := n.chain.ReadAccountNonceByAddress(txs[i].From)
 		if err != nil {
 			return err

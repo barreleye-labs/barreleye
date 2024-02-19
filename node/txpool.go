@@ -23,7 +23,7 @@ func NewTxPool(maxLength int) *TxPool {
 
 func (p *TxPool) Add(tx *types.Transaction) error {
 	if p.pending.Contains(tx.GetHash()) {
-		return fmt.Errorf("this transaction already has a pending transaction")
+		return fmt.Errorf("this transaction is already pending transaction")
 	}
 
 	txs := p.Pending()

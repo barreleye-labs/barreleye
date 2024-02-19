@@ -3,7 +3,6 @@ package barreldb
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"strconv"
@@ -149,11 +148,6 @@ func (barrelDB *BarrelDatabase) SelectLastTxNumber() (*uint32, error) {
 		return nil, nil
 	}
 
-	number, err := strconv.Atoi(hex.EncodeToString(data))
-	if err != nil {
-		return nil, err
-	}
-
-	num := uint32(number)
-	return &num, nil
+	number := binary.BigEndian.Uint32(data)
+	return &number, nil
 }
