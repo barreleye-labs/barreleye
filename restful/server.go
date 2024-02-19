@@ -68,8 +68,18 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid property AccountAddress")
 	}
 
+	accountNonce, err := s.bc.ReadAccountNonceByAddress(s.privateKey.PublicKey.Address())
+	if err != nil {
+		return err
+	}
+
+	nonce := uint64(0)
+	if accountNonce == nil {
+		nonce = 0
+	}
+
 	tx := types.Transaction{
-		Nonce: uint64(171),
+		Nonce: nonce,
 		From:  s.privateKey.PublicKey.Address(),
 		To:    common.NewAddressFromBytes(to),
 		Value: config.FaucetAmount,
@@ -262,10 +272,6 @@ func (s *Server) postTx(c echo.Context) error {
 	signer := types.GetPublicKey(payload.SignerX, payload.SignerY)
 	signature := types.GetSignature(payload.SignatureR, payload.SignatureS)
 
-	nonceBigInt := new(big.Int)
-	nonceBigInt.SetString(payload.Nonce, 16)
-	nonce := nonceBigInt.Uint64()
-
 	from, err := hex.DecodeString(payload.From)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "invalid property from")
@@ -274,6 +280,16 @@ func (s *Server) postTx(c echo.Context) error {
 	to, err := hex.DecodeString(payload.To)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "invalid property to")
+	}
+
+	accountNonce, err := s.bc.ReadAccountNonceByAddress(common.NewAddressFromBytes(from))
+	if err != nil {
+		return err
+	}
+
+	nonce := uint64(0)
+	if accountNonce == nil {
+		nonce = 0
 	}
 
 	valueBigInt := new(big.Int)
