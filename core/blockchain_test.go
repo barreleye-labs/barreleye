@@ -3,7 +3,6 @@ package core
 import (
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/go-kit/log"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -81,7 +80,7 @@ func TestAddBlockToHigh(t *testing.T) {
 }
 
 func newBlockchainWithGenesis(t *testing.T) *Blockchain {
-	pk := crypto.GeneratePrivateKey()
+	pk := types.GeneratePrivateKey()
 	bc, err := NewBlockchain(log.NewNopLogger(), &pk, randomBlock(t, 0, common.Hash{}))
 	assert.Nil(t, err)
 

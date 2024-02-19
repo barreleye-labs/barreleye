@@ -1,40 +1,40 @@
 package main
 
 import (
-	"flag"
-	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/config"
+	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
 	"time"
 
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/node"
 )
 
 func main() {
-	fmt.Println("start")
+	nodeName := common.GetFlag()
 
-	var nodeName string = ""
-	flag.StringVar(&nodeName, "nodeName", "", "Node name")
-	flag.Parse()
+	/* create hex key
+	nodePrivateKey := types.GeneratePrivateKey()
+	hexPrivateKey := hex.EncodeToString(crypto.FromECDSA(nodePrivateKey.Key))
+	privateKey1, _ := crypto.HexToECDSA(hexPrivateKey)
+	nodePrivateKey.Key = privateKey1
+	fmt.Println("pk: ", hexPrivateKey)
+	*/
 
-	// file, _ := os.Open("config/config.json")
-	// defer file.Close()
-	// decoder := json.NewDecoder(file)
-	// nodeInfo := config.NodeInfo{}
-	// err := decoder.Decode(&nodeInfo)
-	// if err != nil {
-	// fmt.Println("error:", err)
-	// }
+	conf := config.GetConfig(nodeName)
+	privateKey, err := types.CreatePrivateKey(conf.PrivateKey)
+	if err != nil {
+		panic("failed to create private key")
+	}
 
-	nodePrivateKey := crypto.GeneratePrivateKey()
 	if nodeName == "genesis-node" {
-		node1 := createNode("GENESIS-NODE", &nodePrivateKey, ":3000", []string{":4000"}, ":9000")
+		node1 := createNode("GENESIS-NODE", privateKey, ":3000", []string{":4000"}, ":9000")
 		node1.Start()
 	} else if nodeName == "wayne" {
-		node2 := createNode("WAYNE", &nodePrivateKey, ":4000", []string{":3000"}, ":9001")
+		node2 := createNode("WAYNE", privateKey, ":4000", []string{":3000"}, ":9001")
 		node2.Start()
 	} else if nodeName == "usi" {
-		node3 := createNode("USI", &nodePrivateKey, ":5000", []string{":4000"}, "")
+		node3 := createNode("USI", privateKey, ":5000", []string{":4000"}, "")
 		node3.Start()
 	}
 
@@ -62,7 +62,7 @@ func main() {
 	select {}
 }
 
-func createNode(id string, pk *crypto.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *node.Node {
+func createNode(id string, pk *types.PrivateKey, addr string, seedNodes []string, apiListenAddr string) *node.Node {
 	opts := node.NodeOpts{
 		APIListenAddr: apiListenAddr,
 		SeedNodes:     seedNodes,

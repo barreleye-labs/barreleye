@@ -8,7 +8,7 @@ import (
 )
 
 // AddressAccount Repository
-func (barrelDB *BarrelDatabase) InsertAddressAccount(address common.Address, account *types.Account) error {
+func (barrelDB *BarrelDatabase) UpsertAddressAccount(address common.Address, account *types.Account) error {
 	buf := &bytes.Buffer{}
 	if err := account.Encode(types.NewGobAccountEncoder(buf)); err != nil {
 		return err
@@ -75,7 +75,7 @@ func (barrelDB *BarrelDatabase) IncreaseAccountBalance(address common.Address, a
 	}
 
 	account.Balance += amount
-	if err = barrelDB.InsertAddressAccount(account.Address, account); err != nil {
+	if err = barrelDB.UpsertAddressAccount(account.Address, account); err != nil {
 		return err
 	}
 	return nil
@@ -96,7 +96,7 @@ func (barrelDB *BarrelDatabase) DecreaseAccountBalance(address common.Address, a
 	}
 
 	account.Balance -= amount
-	if err = barrelDB.InsertAddressAccount(account.Address, account); err != nil {
+	if err = barrelDB.UpsertAddressAccount(account.Address, account); err != nil {
 		return err
 	}
 	return nil

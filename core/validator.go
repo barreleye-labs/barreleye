@@ -48,14 +48,8 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 	// 블록 높이가 같은데 해시가 다를 경우 기존 블록을 버리고 받은 블록으로 덮어 씌움.
 	if lastBlock.Height == b.Height {
 		if lastBlock.Hash.String() != b.Hash.String() && bytes.Compare(lastBlock.Hash.ToSlice(), b.Hash.ToSlice()) == 1 {
-			v.bc.logger.Log("msg", "block replacement")
-			if err = v.bc.RemoveLastHeader(); err != nil {
-				return err
-			}
+			_ = v.bc.logger.Log("msg", "block replacement")
 			if err = v.bc.RemoveLastBlock(); err != nil {
-				return err
-			}
-			if err = v.bc.CancelReward(lastBlock.Validator.Address()); err != nil {
 				return err
 			}
 			return nil

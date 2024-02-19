@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/common/util"
+	"github.com/barreleye-labs/barreleye/config"
 	"github.com/barreleye-labs/barreleye/core/types"
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/restful/dto"
 	"math/big"
 	"net/http"
@@ -27,16 +27,18 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	txChan chan *types.Transaction
 	ServerConfig
-	bc *core.Blockchain
+	txChan     chan *types.Transaction
+	bc         *core.Blockchain
+	privateKey *types.PrivateKey
 }
 
-func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transaction) *Server {
+func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transaction, privateKey *types.PrivateKey) *Server {
 	return &Server{
 		ServerConfig: cfg,
 		bc:           bc,
 		txChan:       txChan,
+		privateKey:   privateKey,
 	}
 }
 
@@ -56,7 +58,44 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) requestSomeCoin(c echo.Context) error {
-	return nil
+	payload := &dto.FaucetRequest{}
+	if err := c.Bind(payload); err != nil {
+		return c.String(http.StatusBadRequest, "bad request")
+	}
+
+	to, err := hex.DecodeString(payload.AccountAddress)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "invalid property AccountAddress")
+	}
+
+	tx := types.Transaction{
+		Nonce: uint64(171),
+		From:  s.privateKey.PublicKey.Address(),
+		To:    common.NewAddressFromBytes(to),
+		Value: config.FaucetAmount,
+		Data:  []byte{171},
+	}
+	tx.Hash = tx.GetHash()
+	if err = tx.Sign(s.privateKey); err != nil {
+		return err
+	}
+
+	s.txChan <- &tx
+
+	signerDTO := dto.CreateSigner(tx.Signer.Key.X.Text(16), tx.Signer.Key.Y.Text(16))
+	signatureDTO := dto.CreateSignature(tx.Signature.R.Text(16), tx.Signature.S.Text(16))
+
+	txDTO := dto.CreateTransaction(
+		tx.Hash.String(),
+		hex.EncodeToString(util.Uint64ToBytes(tx.Nonce)),
+		tx.From.String(),
+		tx.To.String(),
+		hex.EncodeToString(util.Uint64ToBytes(tx.Value)),
+		hex.EncodeToString(tx.Data),
+		signerDTO,
+		signatureDTO)
+
+	return c.JSON(http.StatusOK, dto.CreateTransactionResponse(txDTO))
 }
 
 func (s *Server) getAccount(c echo.Context) error {
@@ -220,8 +259,8 @@ func (s *Server) postTx(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "bad request")
 	}
 
-	signer := crypto.GetPublicKey(payload.SignerX, payload.SignerY)
-	signature := crypto.GetSignature(payload.SignatureR, payload.SignatureS)
+	signer := types.GetPublicKey(payload.SignerX, payload.SignerY)
+	signature := types.GetSignature(payload.SignatureR, payload.SignatureS)
 
 	nonceBigInt := new(big.Int)
 	nonceBigInt.SetString(payload.Nonce, 16)
@@ -252,8 +291,8 @@ func (s *Server) postTx(c echo.Context) error {
 		To:        common.NewAddressFromBytes(to),
 		Value:     value,
 		Data:      data,
-		Signer:    signer,
-		Signature: &signature,
+		Signer:    *signer,
+		Signature: signature,
 	}
 	tx.Hash = tx.GetHash()
 

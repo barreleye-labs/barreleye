@@ -3,7 +3,6 @@ package core
 import (
 	"github.com/barreleye-labs/barreleye/barreldb"
 	"github.com/barreleye-labs/barreleye/core/types"
-	"github.com/barreleye-labs/barreleye/crypto"
 	"sync"
 
 	"github.com/go-kit/log"
@@ -19,7 +18,7 @@ type Blockchain struct {
 	db            *barreldb.BarrelDatabase
 }
 
-func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.Block) (*Blockchain, error) {
+func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, genesis *types.Block) (*Blockchain, error) {
 	db, _ := barreldb.New()
 
 	err := db.CreateTable(barreldb.HashBlockTableName, barreldb.HashBlockPrefix)
@@ -79,7 +78,7 @@ func NewBlockchain(l log.Logger, privateKey *crypto.PrivateKey, genesis *types.B
 	bc.validator = NewBlockValidator(bc)
 
 	if privateKey != nil {
-		coinbase := privateKey.PublicKey()
+		coinbase := privateKey.PublicKey
 
 		coinbaseAccount := types.CreateAccount(coinbase.Address())
 		_, err = bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount)
@@ -115,7 +114,7 @@ func (bc *Blockchain) AddBlock(b *types.Block) error {
 
 func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 	if len(tx.Data) > 0 {
-		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash())
+		_ = bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash())
 
 		vm := NewVM(tx.Data, bc.contractState)
 		if err := vm.Run(); err != nil {
@@ -136,8 +135,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 
 			b.Transactions[i] = b.Transactions[len(b.Transactions)-1]
 			b.Transactions = b.Transactions[:len(b.Transactions)-1]
-
-			continue
+			i--
 		}
 	}
 
@@ -167,13 +165,13 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 
 	for _, tx := range b.Transactions {
 		nextTxNumber := uint32(0)
-		number, err := bc.ReadLastTxNumber()
+		lastTxNumber, err := bc.ReadLastTxNumber()
 		if err != nil {
 			return err
 		}
 
-		if number != nil {
-			nextTxNumber = *number + 1
+		if lastTxNumber != nil {
+			nextTxNumber = *lastTxNumber + 1
 		}
 
 		if err := bc.WriteTxWithHash(tx.GetHash(), tx); err != nil {
@@ -190,7 +188,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 		}
 	}
 
-	bc.logger.Log(
+	_ = bc.logger.Log(
 		"msg", "🔗 add new block",
 		"hash", b.GetHash(),
 		"height", b.Height,

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/barreleye-labs/barreleye/core"
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/barreleye-labs/barreleye/restful"
 	"github.com/go-kit/log"
 )
@@ -29,7 +28,7 @@ type NodeOpts struct {
 	RPCDecodeFunc RPCDecodeFunc
 	RPCProcessor  RPCProcessor
 	BlockTime     time.Duration
-	PrivateKey    *crypto.PrivateKey
+	PrivateKey    *types.PrivateKey
 }
 
 type Node struct {
@@ -81,7 +80,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 			Logger:     opts.Logger,
 			ListenAddr: opts.APIListenAddr,
 		}
-		apiNode := restful.NewServer(apiNodeCfg, chain, txChan)
+		apiNode := restful.NewServer(apiNodeCfg, chain, txChan, opts.PrivateKey)
 		go apiNode.Start()
 
 		opts.Logger.Log("msg", "JSON API Node running", "port", opts.APIListenAddr)
@@ -479,6 +478,19 @@ func (n *Node) sealBlock() error {
 	// 트랜잭션을 아직 구체화하지 않았기 때문.
 	txx := n.mempool.Pending()
 
+	for i := 0; i < len(txx); i++ {
+		tx, err := n.chain.ReadTxByHash(txx[i].Hash)
+		if err != nil {
+			return err
+		}
+
+		if tx != nil {
+			txx[i] = txx[len(txx)-1]
+			txx = txx[:len(txx)-1]
+			i--
+		}
+	}
+
 	block, err := types.NewBlockFromPrevHeader(lastHeader, txx)
 	if err != nil {
 		return err
@@ -501,7 +513,7 @@ func (n *Node) sealBlock() error {
 	return nil
 }
 
-func CreateGenesisBlock(privateKey *crypto.PrivateKey) *types.Block {
+func CreateGenesisBlock(privateKey *types.PrivateKey) *types.Block {
 	//coinbase := privateKey.PublicKey()
 
 	//tx := &types.Transaction{

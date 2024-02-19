@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
 func TestSignBlock(t *testing.T) {
-	privKey := crypto.GeneratePrivateKey()
+	privKey := types.GeneratePrivateKey()
 	b := randomBlock(t, 0, common.Hash{})
 
 	assert.Nil(t, b.Sign(privKey))
@@ -19,13 +18,13 @@ func TestSignBlock(t *testing.T) {
 }
 
 func TestVerifyBlock(t *testing.T) {
-	privKey := crypto.GeneratePrivateKey()
+	privKey := types.GeneratePrivateKey()
 	b := randomBlock(t, 0, common.Hash{})
 
 	assert.Nil(t, b.Sign(privKey))
 	assert.Nil(t, b.Verify())
 
-	otherPrivKey := crypto.GeneratePrivateKey()
+	otherPrivKey := types.GeneratePrivateKey()
 	b.Validator = otherPrivKey.PublicKey()
 	assert.NotNil(t, b.Verify())
 
@@ -34,7 +33,7 @@ func TestVerifyBlock(t *testing.T) {
 }
 
 func randomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *types.Block {
-	privKey := crypto.GeneratePrivateKey()
+	privKey := types.GeneratePrivateKey()
 	tx := randomTxWithSignature(t)
 	header := &types.Header{
 		Version:       1,

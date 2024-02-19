@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,27 +20,27 @@ func RandomHash() common.Hash {
 }
 
 // NewRandomTransaction return a new random transaction whithout signature.
-func NewRandomTransaction(privateKey crypto.PrivateKey) *Transaction {
+func NewRandomTransaction(privateKey *PrivateKey) *Transaction {
 	s := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(s)
 
 	return &Transaction{
 		Nonce: 171, //ab
-		From:  privateKey.PublicKey().Address(),
-		To:    privateKey.PublicKey().Address(),
+		From:  privateKey.PublicKey.Address(),
+		To:    privateKey.PublicKey.Address(),
 		Value: 171, //ab
 		Data:  RandomBytes(r.Intn(1000)),
 	}
 }
 
-func NewRandomTransactionWithSignature(t *testing.T, privateKey crypto.PrivateKey, size int) *Transaction {
+func NewRandomTransactionWithSignature(t *testing.T, privateKey *PrivateKey, size int) *Transaction {
 	tx := NewRandomTransaction(privateKey)
 	assert.Nil(t, tx.Sign(privateKey))
 	return tx
 }
 
 func NewRandomBlock(t *testing.T, height int32, prevBlockHash common.Hash) *Block {
-	txSigner := crypto.GeneratePrivateKey()
+	txSigner := GeneratePrivateKey()
 	tx := NewRandomTransactionWithSignature(t, txSigner, 100)
 	header := &Header{
 		Version:       1,
@@ -58,7 +57,7 @@ func NewRandomBlock(t *testing.T, height int32, prevBlockHash common.Hash) *Bloc
 	return b
 }
 
-func NewRandomBlockWithSignature(t *testing.T, pk crypto.PrivateKey, height int32, prevHash common.Hash) *Block {
+func NewRandomBlockWithSignature(t *testing.T, pk PrivateKey, height int32, prevHash common.Hash) *Block {
 	b := NewRandomBlock(t, height, prevHash)
 	assert.Nil(t, b.Sign(pk))
 
