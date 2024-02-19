@@ -90,6 +90,10 @@ type TransactionRequest struct {
 	SignatureS string `json:"signatureS"`
 }
 
+type FaucetRequest struct {
+	AccountAddress string `json:"accountAddress"`
+}
+
 type TransactionsResponse struct {
 	Transactions []Transaction `json:"transactions"`
 	TotalCount   uint32        `json:"totalCount"`

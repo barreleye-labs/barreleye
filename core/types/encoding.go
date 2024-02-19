@@ -97,8 +97,6 @@ func (dec *GobBlockDecoder) Decode(b *Block) error {
 	return gob.NewDecoder(dec.r).Decode(b)
 }
 
-//////
-
 type GobAccountEncoder struct {
 	w io.Writer
 }
@@ -125,4 +123,32 @@ func NewGobAccountDecoder(r io.Reader) *GobAccountDecoder {
 
 func (dec *GobAccountDecoder) Decode(a *Account) error {
 	return gob.NewDecoder(dec.r).Decode(a)
+}
+
+type GobPrivateKeyEncoder struct {
+	w io.Writer
+}
+
+func NewGobPrivateKeyEncoder(w io.Writer) *GobPrivateKeyEncoder {
+	return &GobPrivateKeyEncoder{
+		w: w,
+	}
+}
+
+func (enc *GobPrivateKeyEncoder) Encode(key *PrivateKey) error {
+	return gob.NewEncoder(enc.w).Encode(key)
+}
+
+type GobPrivateKeyDecoder struct {
+	r io.Reader
+}
+
+func NewGobPrivateKeyDecoder(r io.Reader) *GobPrivateKeyDecoder {
+	return &GobPrivateKeyDecoder{
+		r: r,
+	}
+}
+
+func (dec *GobPrivateKeyDecoder) Decode(key *PrivateKey) error {
+	return gob.NewDecoder(dec.r).Decode(key)
 }

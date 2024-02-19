@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
-	"github.com/barreleye-labs/barreleye/crypto"
 )
 
 type Transaction struct {
@@ -12,8 +11,8 @@ type Transaction struct {
 	To        common.Address
 	Value     uint64
 	Data      []byte
-	Signer    crypto.PublicKey
-	Signature *crypto.Signature
+	Signer    PublicKey
+	Signature *Signature
 
 	Hash common.Hash
 }
@@ -25,14 +24,14 @@ func (tx *Transaction) GetHash() common.Hash {
 	return tx.Hash
 }
 
-func (tx *Transaction) Sign(privateKey crypto.PrivateKey) error {
+func (tx *Transaction) Sign(privateKey *PrivateKey) error {
 	hash := tx.GetHash()
 	sig, err := privateKey.Sign(hash.ToSlice())
 	if err != nil {
 		return err
 	}
 
-	tx.Signer = privateKey.PublicKey()
+	tx.Signer = privateKey.PublicKey
 	tx.Signature = sig
 
 	return nil

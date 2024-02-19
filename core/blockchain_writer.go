@@ -64,25 +64,21 @@ func (bc *Blockchain) WriteTxWithNumber(number uint32, tx *types.Transaction) er
 }
 
 func (bc *Blockchain) WriteLastTx(tx *types.Transaction) error {
-	if err := bc.db.InsertLastTx(tx); err != nil {
+	if err := bc.db.UpsertLastTx(tx); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (bc *Blockchain) WriteLastTxNumber(number uint32) error {
-	if err := bc.db.InsertLastTxNumber(number); err != nil {
+	if err := bc.db.UpsertLastTxNumber(number); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (bc *Blockchain) WriteAccountWithAddress(address common.Address, account *types.Account) (*types.Account, error) {
-	if account == nil {
-		account = types.CreateAccount(address)
-	}
-
-	if err := bc.db.InsertAddressAccount(address, account); err != nil {
+	if err := bc.db.UpsertAddressAccount(address, account); err != nil {
 		return nil, err
 	}
 	return account, nil
@@ -95,8 +91,8 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 	}
 
 	if fromAccount == nil {
-		// TODO: Register account at Coin Faucet
-		fromAccount, err = bc.WriteAccountWithAddress(from, nil)
+		fromAccount = types.CreateAccount(from)
+		fromAccount, err = bc.WriteAccountWithAddress(from, fromAccount)
 		if err != nil {
 			return err
 		}
@@ -108,7 +104,8 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 	}
 
 	if toAccount == nil {
-		toAccount, err = bc.WriteAccountWithAddress(to, nil)
+		toAccount = types.CreateAccount(to)
+		toAccount, err = bc.WriteAccountWithAddress(to, toAccount)
 		if err != nil {
 			return err
 		}
@@ -118,10 +115,10 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 		return err
 	}
 
-	if err = bc.db.InsertAddressAccount(fromAccount.Address, fromAccount); err != nil {
+	if err = bc.db.UpsertAddressAccount(fromAccount.Address, fromAccount); err != nil {
 		return err
 	}
-	if err = bc.db.InsertAddressAccount(fromAccount.Address, fromAccount); err != nil {
+	if err = bc.db.UpsertAddressAccount(fromAccount.Address, fromAccount); err != nil {
 		return err
 	}
 
@@ -134,30 +131,42 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 }
 
 func (bc *Blockchain) RemoveLastBlock() error {
-	block, err := bc.db.SelectLastBlock()
+	if err := bc.removeLastHeader(); err != nil {
+		return err
+	}
+
+	if err := bc.removeLastBlockTxs(); err != nil {
+		return err
+	}
+
+	lastBlock, err := bc.db.SelectLastBlock()
 	if err != nil {
 		return err
 	}
 
-	if block == nil {
-		return fmt.Errorf("not found last block for removing")
+	if lastBlock == nil {
+		return fmt.Errorf("not found last block for removing block")
 	}
 
-	if block.Height < 1 {
+	if lastBlock.Height < 1 {
 		return fmt.Errorf("genesis block can not delete")
 	}
 
-	if err = bc.db.DeleteHashBlock(block.Hash); err != nil {
+	if err = bc.cancelReward(lastBlock.Validator.Address()); err != nil {
 		return err
 	}
-	if err = bc.db.DeleteHeightBlock(block.Height); err != nil {
+
+	if err = bc.db.DeleteHashBlock(lastBlock.Hash); err != nil {
+		return err
+	}
+	if err = bc.db.DeleteHeightBlock(lastBlock.Height); err != nil {
 		return err
 	}
 	if err = bc.db.DeleteLastBlock(); err != nil {
 		return err
 	}
 
-	prevBlock, err := bc.db.SelectHeightBlock(block.Height - 1)
+	prevBlock, err := bc.db.SelectHeightBlock(lastBlock.Height - 1)
 	if err != nil {
 		return err
 	}
@@ -173,7 +182,61 @@ func (bc *Blockchain) RemoveLastBlock() error {
 	return nil
 }
 
-func (bc *Blockchain) RemoveLastHeader() error {
+func (bc *Blockchain) removeLastBlockTxs() error {
+	lastBlock, err := bc.db.SelectLastBlock()
+	if err != nil {
+		return err
+	}
+
+	if lastBlock == nil {
+		return fmt.Errorf("not found last block for removing txs")
+	}
+
+	lastTxNumber, err := bc.db.SelectLastTxNumber()
+	if err != nil {
+		return err
+	}
+
+	targetTxNum := uint32(0)
+	if lastTxNumber != nil {
+		targetTxNum = *lastTxNumber
+	}
+
+	edited := false
+	for i := 0; i < len(lastBlock.Transactions); i++ {
+		edited = true
+		if err = bc.db.DeleteHashTx(lastBlock.Transactions[i].Hash); err != nil {
+			return err
+		}
+
+		if err = bc.db.DeleteNumberTx(targetTxNum); err != nil {
+			return err
+		}
+		targetTxNum--
+	}
+
+	if edited {
+		if err = bc.db.UpsertLastTxNumber(targetTxNum); err != nil {
+			return err
+		}
+
+		lastTx, err := bc.db.SelectNumberTx(targetTxNum)
+		if err != nil {
+			return err
+		}
+
+		if lastTx == nil {
+			return fmt.Errorf("not found numberTx")
+		}
+
+		if err = bc.db.UpsertLastTx(lastTx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (bc *Blockchain) removeLastHeader() error {
 	header, err := bc.db.SelectLastHeader()
 	if err != nil {
 		return err
@@ -213,15 +276,41 @@ func (bc *Blockchain) RemoveLastHeader() error {
 	return nil
 }
 
-func (bc *Blockchain) CancelReward(address common.Address) error {
-	if err := bc.db.DecreaseAccountBalance(address, uint64(config.BlockReward)); err != nil {
+func (bc *Blockchain) cancelReward(address common.Address) error {
+	account, err := bc.ReadAccountByAddress(address)
+	if err != nil {
+		return err
+	}
+
+	if account == nil {
+		account = types.CreateAccount(address)
+		account, err = bc.WriteAccountWithAddress(account.Address, account)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = bc.db.DecreaseAccountBalance(address, uint64(config.BlockReward)); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (bc *Blockchain) GiveReward(address common.Address) error {
-	if err := bc.db.IncreaseAccountBalance(address, uint64(config.BlockReward)); err != nil {
+	account, err := bc.ReadAccountByAddress(address)
+	if err != nil {
+		return err
+	}
+
+	if account == nil {
+		account = types.CreateAccount(address)
+		account, err = bc.WriteAccountWithAddress(account.Address, account)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = bc.db.IncreaseAccountBalance(account.Address, uint64(config.BlockReward)); err != nil {
 		return err
 	}
 	return nil

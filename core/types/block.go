@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
-	"github.com/barreleye-labs/barreleye/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"time"
 )
@@ -39,8 +38,8 @@ type Block struct {
 	*Header
 
 	Transactions []*Transaction
-	Validator    crypto.PublicKey
-	Signature    *crypto.Signature
+	Validator    PublicKey
+	Signature    *Signature
 
 	// Cached version of the header hash
 	Hash common.Hash
@@ -78,13 +77,13 @@ func (b *Block) AddTransaction(tx *Transaction) {
 	b.DataHash = hash
 }
 
-func (b *Block) Sign(privateKey crypto.PrivateKey) error {
+func (b *Block) Sign(privateKey PrivateKey) error {
 	sig, err := privateKey.Sign(b.GetHash().ToSlice())
 	if err != nil {
 		return err
 	}
 
-	b.Validator = privateKey.PublicKey()
+	b.Validator = privateKey.PublicKey
 	b.Signature = sig
 
 	return nil

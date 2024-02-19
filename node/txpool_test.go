@@ -2,14 +2,13 @@ package node
 
 import (
 	"github.com/barreleye-labs/barreleye/core/types"
-	"github.com/barreleye-labs/barreleye/crypto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTxMaxLength(t *testing.T) {
-	privateKey := crypto.GeneratePrivateKey()
+	privateKey := types.GeneratePrivateKey()
 	p := NewTxPool(1)
 	p.Add(types.NewRandomTransaction(privateKey))
 	assert.Equal(t, 1, p.all.Count())
@@ -24,7 +23,7 @@ func TestTxMaxLength(t *testing.T) {
 }
 
 func TestTxPoolAdd(t *testing.T) {
-	privateKey := crypto.GeneratePrivateKey()
+	privateKey := types.GeneratePrivateKey()
 
 	p := NewTxPool(11)
 	n := 10
@@ -42,7 +41,7 @@ func TestTxPoolAdd(t *testing.T) {
 }
 
 func TestTxPoolMaxLength(t *testing.T) {
-	privateKey := crypto.GeneratePrivateKey()
+	privateKey := types.GeneratePrivateKey()
 
 	maxLen := 10
 	p := NewTxPool(maxLen)
@@ -67,7 +66,7 @@ func TestTxPoolMaxLength(t *testing.T) {
 }
 
 func TestTxSortedMapFirst(t *testing.T) {
-	privateKey := crypto.GeneratePrivateKey()
+	privateKey := types.GeneratePrivateKey()
 
 	m := NewTxSortedMap()
 	first := types.NewRandomTransaction(privateKey)
@@ -80,7 +79,7 @@ func TestTxSortedMapFirst(t *testing.T) {
 }
 
 func TestTxSortedMapAdd(t *testing.T) {
-	privateKey := crypto.GeneratePrivateKey()
+	privateKey := types.GeneratePrivateKey()
 
 	m := NewTxSortedMap()
 	n := 100
@@ -104,7 +103,7 @@ func TestTxSortedMapAdd(t *testing.T) {
 }
 
 func TestTxSortedMapRemove(t *testing.T) {
-	privateKey := crypto.GeneratePrivateKey()
+	privateKey := types.GeneratePrivateKey()
 
 	m := NewTxSortedMap()
 
