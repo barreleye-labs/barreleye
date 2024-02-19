@@ -116,7 +116,7 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 	if err = bc.db.UpsertAddressAccount(fromAccount.Address, fromAccount); err != nil {
 		return err
 	}
-	if err = bc.db.UpsertAddressAccount(fromAccount.Address, fromAccount); err != nil {
+	if err = bc.db.UpsertAddressAccount(toAccount.Address, toAccount); err != nil {
 		return err
 	}
 
@@ -195,12 +195,14 @@ func (bc *Blockchain) removeLastBlockTxs() error {
 		return err
 	}
 
-	targetTxNum := uint32(0)
-	if lastTxNumber != nil {
-		targetTxNum = *lastTxNumber
+	if lastTxNumber == nil {
+		return nil
 	}
 
+	targetTxNum := *lastTxNumber
+
 	edited := false
+	isTxLeft := true
 	for i := 0; i < len(lastBlock.Transactions); i++ {
 		edited = true
 		account, err := bc.db.SelectAddressAccount(lastBlock.Transactions[i].From)
@@ -225,25 +227,40 @@ func (bc *Blockchain) removeLastBlockTxs() error {
 		if err = bc.db.DeleteNumberTx(targetTxNum); err != nil {
 			return err
 		}
+
+		if targetTxNum == uint32(0) {
+			isTxLeft = false
+		}
 		targetTxNum--
 	}
 
 	if edited {
-		if err = bc.db.UpsertLastTxNumber(targetTxNum); err != nil {
-			return err
-		}
+		if isTxLeft {
+			if err = bc.db.UpsertLastTxNumber(targetTxNum); err != nil {
+				return err
+			}
 
-		lastTx, err := bc.db.SelectNumberTx(targetTxNum)
-		if err != nil {
-			return err
-		}
+			lastTx, err := bc.db.SelectNumberTx(targetTxNum)
+			if err != nil {
+				return err
+			}
 
-		if lastTx == nil {
-			return fmt.Errorf("not found numberTx")
-		}
+			if lastTx == nil {
+				return fmt.Errorf("not found numberTx")
+			}
 
-		if err = bc.db.UpsertLastTx(lastTx); err != nil {
-			return err
+			if err = bc.db.UpsertLastTx(lastTx); err != nil {
+				return err
+			}
+
+		} else {
+			if err = bc.db.DeleteLastTxNumber(); err != nil {
+				return err
+			}
+
+			if err = bc.db.DeleteLastTx(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

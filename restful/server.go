@@ -74,8 +74,8 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 	}
 
 	nonce := uint64(0)
-	if accountNonce == nil {
-		nonce = 0
+	if accountNonce != nil {
+		nonce = *accountNonce
 	}
 
 	tx := types.Transaction{
@@ -288,8 +288,8 @@ func (s *Server) postTx(c echo.Context) error {
 	}
 
 	nonce := uint64(0)
-	if accountNonce == nil {
-		nonce = 0
+	if accountNonce != nil {
+		nonce = *accountNonce
 	}
 
 	valueBigInt := new(big.Int)
@@ -319,7 +319,7 @@ func (s *Server) postTx(c echo.Context) error {
 
 	txDTO := dto.CreateTransaction(
 		tx.Hash.String(),
-		payload.Nonce,
+		hex.EncodeToString(util.Uint64ToBytes(tx.Nonce)),
 		payload.From,
 		payload.To,
 		payload.Value,
