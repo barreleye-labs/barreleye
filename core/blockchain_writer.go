@@ -77,11 +77,11 @@ func (bc *Blockchain) WriteLastTxNumber(number uint32) error {
 	return nil
 }
 
-func (bc *Blockchain) WriteAccountWithAddress(address common.Address, account *types.Account) (*types.Account, error) {
+func (bc *Blockchain) WriteAccountWithAddress(address common.Address, account *types.Account) error {
 	if err := bc.db.UpsertAddressAccount(address, account); err != nil {
-		return nil, err
+		return err
 	}
-	return account, nil
+	return nil
 }
 
 func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
@@ -92,8 +92,7 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 
 	if fromAccount == nil {
 		fromAccount = types.CreateAccount(from)
-		fromAccount, err = bc.WriteAccountWithAddress(from, fromAccount)
-		if err != nil {
+		if err = bc.WriteAccountWithAddress(from, fromAccount); err != nil {
 			return err
 		}
 	}
@@ -105,8 +104,7 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 
 	if toAccount == nil {
 		toAccount = types.CreateAccount(to)
-		toAccount, err = bc.WriteAccountWithAddress(to, toAccount)
-		if err != nil {
+		if err = bc.WriteAccountWithAddress(to, toAccount); err != nil {
 			return err
 		}
 	}
@@ -205,6 +203,21 @@ func (bc *Blockchain) removeLastBlockTxs() error {
 	edited := false
 	for i := 0; i < len(lastBlock.Transactions); i++ {
 		edited = true
+		account, err := bc.db.SelectAddressAccount(lastBlock.Transactions[i].From)
+		if err != nil {
+			return err
+		}
+
+		if account == nil {
+			return fmt.Errorf("not found tx from account")
+		}
+
+		account.Nonce--
+
+		if err = bc.db.UpsertAddressAccount(account.Address, account); err != nil {
+			return nil
+		}
+
 		if err = bc.db.DeleteHashTx(lastBlock.Transactions[i].Hash); err != nil {
 			return err
 		}
@@ -284,13 +297,12 @@ func (bc *Blockchain) cancelReward(address common.Address) error {
 
 	if account == nil {
 		account = types.CreateAccount(address)
-		account, err = bc.WriteAccountWithAddress(account.Address, account)
-		if err != nil {
+		if err = bc.WriteAccountWithAddress(account.Address, account); err != nil {
 			return err
 		}
 	}
 
-	if err = bc.db.DecreaseAccountBalance(address, uint64(config.BlockReward)); err != nil {
+	if err = bc.db.DecreaseAccountBalance(address, config.BlockReward); err != nil {
 		return err
 	}
 	return nil
@@ -304,8 +316,7 @@ func (bc *Blockchain) GiveReward(address common.Address) error {
 
 	if account == nil {
 		account = types.CreateAccount(address)
-		account, err = bc.WriteAccountWithAddress(account.Address, account)
-		if err != nil {
+		if err = bc.WriteAccountWithAddress(account.Address, account); err != nil {
 			return err
 		}
 	}

@@ -166,7 +166,7 @@ free:
 				continue
 			}
 
-			if err := n.RPCProcessor.ProcessMessage(msg); err != nil {
+			if err = n.RPCProcessor.ProcessMessage(msg); err != nil {
 				if err != core.ErrBlockKnown {
 					_ = n.Logger.Log("error", err)
 				}
@@ -236,25 +236,23 @@ func (n *Node) processBlock(b *types.Block) error {
 }
 
 func (n *Node) processTransaction(tx *types.Transaction) error {
-	hash := tx.GetHash()
-
-	if n.mempool.Contains(hash) {
-		return nil
-	}
-
 	if err := tx.Verify(); err != nil {
 		return err
 	}
 
-	// s.Logger.Log(
-	// 	"msg", "adding new tx to mempool",
-	// 	"hash", hash,
-	// 	"mempoolPending", s.mempool.PendingCount(),
-	// )
+	if err := n.mempool.Add(tx); err != nil {
+		return err
+	}
 
 	go n.broadcastTx(tx)
 
-	n.mempool.Add(tx)
+	hash := tx.GetHash()
+
+	_ = n.Logger.Log(
+		"msg", "🗃️ adding new tx to txpool",
+		"hash", hash,
+		"PendingCount", n.mempool.PendingCount(),
+	)
 
 	return nil
 }
@@ -474,24 +472,39 @@ func (n *Node) sealBlock() error {
 		return fmt.Errorf("can not seal the block without genesis block")
 	}
 
-	// 우선은 멤풀에 있는 모든 트랜잭션을 블록에 담고 추후 수정 예정.
-	// 트랜잭션을 아직 구체화하지 않았기 때문.
-	txx := n.mempool.Pending()
+	txs := n.mempool.Pending()
 
-	for i := 0; i < len(txx); i++ {
-		tx, err := n.chain.ReadTxByHash(txx[i].Hash)
+	for i := 0; i < len(txs); i++ {
+		txProcessed, err := n.chain.ReadTxByHash(txs[i].Hash)
 		if err != nil {
 			return err
 		}
 
-		if tx != nil {
-			txx[i] = txx[len(txx)-1]
-			txx = txx[:len(txx)-1]
+		if txProcessed != nil {
+			txs[i] = txs[len(txs)-1]
+			txs = txs[:len(txs)-1]
+			i--
+			continue
+		}
+		///다시봐야함
+		accountNonce, err := n.chain.ReadAccountNonceByAddress(txs[i].From)
+		if err != nil {
+			return err
+		}
+
+		nonce := uint64(0)
+		if accountNonce != nil {
+			nonce = *accountNonce
+		}
+
+		if nonce != txs[i].Nonce {
+			txs[i] = txs[len(txs)-1]
+			txs = txs[:len(txs)-1]
 			i--
 		}
 	}
 
-	block, err := types.NewBlockFromPrevHeader(lastHeader, txx)
+	block, err := types.NewBlockFromPrevHeader(lastHeader, txs)
 	if err != nil {
 		return err
 	}

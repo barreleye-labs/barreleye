@@ -265,6 +265,18 @@ func (bc *Blockchain) ReadAccountByAddress(address common.Address) (*types.Accou
 	return account, nil
 }
 
+func (bc *Blockchain) ReadAccountNonceByAddress(address common.Address) (*uint64, error) {
+	account, err := bc.db.SelectAddressAccount(address)
+	if err != nil {
+		return nil, err
+	}
+
+	if account == nil {
+		return nil, nil
+	}
+	return &account.Nonce, nil
+}
+
 func (bc *Blockchain) ReadBalance(address common.Address) (*uint64, error) {
 	account, err := bc.ReadAccountByAddress(address)
 	if err != nil {

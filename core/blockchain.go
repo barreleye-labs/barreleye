@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/barreleye-labs/barreleye/barreldb"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"sync"
@@ -81,8 +82,7 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, genesis *types.Bl
 		coinbase := privateKey.PublicKey
 
 		coinbaseAccount := types.CreateAccount(coinbase.Address())
-		_, err = bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount)
-		if err != nil {
+		if err = bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount); err != nil {
 			return nil, err
 		}
 	}
@@ -113,6 +113,22 @@ func (bc *Blockchain) AddBlock(b *types.Block) error {
 }
 
 func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
+	account, err := bc.ReadAccountByAddress(tx.From)
+	if err != nil {
+		return err
+	}
+
+	if account == nil {
+		account = types.CreateAccount(tx.From)
+		if err = bc.WriteAccountWithAddress(account.Address, account); err != nil {
+			return err
+		}
+	}
+
+	if account.Nonce != tx.Nonce {
+		return fmt.Errorf("invalid tx nonce")
+	}
+
 	if len(tx.Data) > 0 {
 		_ = bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash())
 
@@ -125,6 +141,13 @@ func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 	if err := bc.Transfer(tx.From, tx.To, tx.Value); err != nil {
 		return err
 	}
+
+	account.Nonce++
+
+	if err = bc.WriteAccountWithAddress(account.Address, account); err != nil {
+		return err
+	}
+
 	return nil
 }
 

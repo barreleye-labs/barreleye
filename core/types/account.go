@@ -7,15 +7,15 @@ import (
 
 type Account struct {
 	Address common.Address
-	Nonce   uint32
+	Nonce   uint64
 	Balance uint64
 }
 
 func CreateAccount(address common.Address) *Account {
 	return &Account{
 		Address: address,
-		Nonce:   uint32(0),
-		Balance: 100_000_000_000,
+		Nonce:   uint64(0),
+		Balance: uint64(0),
 	}
 }
 

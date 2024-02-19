@@ -1,13 +1,13 @@
 package node
 
 import (
+	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"sync"
 )
 
 type TxPool struct {
-	all     *TxSortedMap
 	pending *TxSortedMap
 	// 풀 사이즈
 	// 풀이 가득차면 가장 오래된 트랜잭션부터 프루닝할 것.
@@ -16,27 +16,34 @@ type TxPool struct {
 
 func NewTxPool(maxLength int) *TxPool {
 	return &TxPool{
-		all:       NewTxSortedMap(),
 		pending:   NewTxSortedMap(),
 		maxLength: maxLength,
 	}
 }
 
-func (p *TxPool) Add(tx *types.Transaction) {
-	// 프루닝
-	if p.all.Count() == p.maxLength {
-		oldest := p.all.First()
-		p.all.Remove(oldest.GetHash())
+func (p *TxPool) Add(tx *types.Transaction) error {
+	if p.pending.Contains(tx.GetHash()) {
+		return fmt.Errorf("this transaction already has a pending transaction")
 	}
 
-	if !p.all.Contains(tx.GetHash()) {
-		p.all.Add(tx)
-		p.pending.Add(tx)
+	txs := p.Pending()
+	for i := 0; i < len(txs); i++ {
+		if txs[i].From == tx.From {
+			return fmt.Errorf("this account already has a pending transaction")
+		}
 	}
+
+	if p.pending.Count() == p.maxLength {
+		oldest := p.pending.First()
+		p.pending.Remove(oldest.GetHash())
+	}
+	p.pending.Add(tx)
+
+	return nil
 }
 
 func (p *TxPool) Contains(hash common.Hash) bool {
-	return p.all.Contains(hash)
+	return p.pending.Contains(hash)
 }
 
 // Pending returns a slice of transactions that are in the pending pool
