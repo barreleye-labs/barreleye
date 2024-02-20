@@ -135,7 +135,7 @@ func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
 }
 
 type RPCProcessor interface {
-	ProcessMessage(*DecodedMessage) error
+	HandleMessage(*DecodedMessage) error
 }
 
 func init() {

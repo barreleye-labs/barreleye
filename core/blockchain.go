@@ -5,6 +5,7 @@ import (
 	"github.com/barreleye-labs/barreleye/barreldb"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"sync"
+	"time"
 
 	"github.com/go-kit/log"
 )
@@ -19,7 +20,7 @@ type Blockchain struct {
 	db            *barreldb.BarrelDatabase
 }
 
-func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, genesis *types.Block) (*Blockchain, error) {
+func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, nodeID string) (*Blockchain, error) {
 	db, _ := barreldb.New()
 
 	err := db.CreateTable(barreldb.HashBlockTableName, barreldb.HashBlockPrefix)
@@ -87,14 +88,56 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, genesis *types.Bl
 		}
 	}
 
-	if genesis != nil {
-		err = bc.addBlockWithoutValidation(genesis)
+	if nodeID == "GENESIS-NODE" {
+		lastBlock, err := bc.ReadLastBlock()
 		if err != nil {
 			return nil, err
+		}
+
+		if lastBlock == nil {
+			err = bc.addBlockWithoutValidation(CreateGenesisBlock(privateKey))
+			if err != nil {
+				return nil, err
+			}
+
+			_ = bc.logger.Log("msg", "🌞 create genesis block")
 		}
 	}
 
 	return bc, nil
+}
+
+func CreateGenesisBlock(privateKey *types.PrivateKey) *types.Block {
+	//coinbase := privateKey.PublicKey()
+
+	//tx := &types.Transaction{
+	//	Nonce: 171, //ab
+	//	From:  coinbase.Address(),
+	//	To:    coinbase.Address(),
+	//	Value: 171, //ab
+	//	Data:  []byte{171},
+	//}
+
+	//if err := tx.Sign(*privateKey); err != nil {
+	//	panic(err)
+	//}
+
+	header := &types.Header{
+		Version:   1,
+		Height:    0,
+		Timestamp: time.Now().UnixNano(),
+	}
+
+	b, _ := types.NewBlock(header, nil)
+
+	//b.Transactions = append(b.Transactions, tx)
+	//hash, _ := types.CalculateDataHash(b.Transactions)
+	//b.DataHash = hash
+
+	if err := b.Sign(*privateKey); err != nil {
+		panic(err)
+	}
+	return b
 }
 
 func (bc *Blockchain) SetValidator(v Validator) {
@@ -182,7 +225,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 		return err
 	}
 
-	if err := bc.GiveReward(b.Validator.Address()); err != nil {
+	if err := bc.GiveReward(b.Signer.Address()); err != nil {
 		return err
 	}
 
@@ -197,16 +240,16 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 			nextTxNumber = *lastTxNumber + 1
 		}
 
-		if err := bc.WriteTxWithHash(tx.GetHash(), tx); err != nil {
+		if err = bc.WriteTxWithHash(tx.GetHash(), tx); err != nil {
 			return err
 		}
-		if err := bc.WriteTxWithNumber(nextTxNumber, tx); err != nil {
+		if err = bc.WriteTxWithNumber(nextTxNumber, tx); err != nil {
 			return err
 		}
-		if err := bc.WriteLastTx(tx); err != nil {
+		if err = bc.WriteLastTx(tx); err != nil {
 			return err
 		}
-		if err := bc.WriteLastTxNumber(nextTxNumber); err != nil {
+		if err = bc.WriteLastTxNumber(nextTxNumber); err != nil {
 			return err
 		}
 	}

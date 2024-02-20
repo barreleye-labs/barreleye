@@ -38,24 +38,29 @@ type Block struct {
 	*Header
 
 	Transactions []*Transaction
-	Validator    PublicKey
+	Signer       PublicKey
 	Signature    *Signature
 
 	// Cached version of the header hash
 	Hash common.Hash
 }
 
-func NewBlock(h *Header, txx []*Transaction) (*Block, error) {
+func NewBlock(h *Header, txs []*Transaction) (*Block, error) {
+	for i := 0; i < len(txs); i++ {
+		txs[i].BlockHeight = h.Height
+		txs[i].Timestamp = h.Timestamp
+	}
+
 	block := &Block{
 		Header:       h,
-		Transactions: txx,
+		Transactions: txs,
 	}
 	block.Hash = block.GetHash()
 	return block, nil
 }
 
-func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, error) {
-	dataHash, err := CalculateDataHash(txx)
+func NewBlockFromPrevHeader(prevHeader *Header, txs []*Transaction) (*Block, error) {
+	dataHash, err := CalculateDataHash(txs)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +73,7 @@ func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, err
 		Timestamp:     time.Now().UnixNano(),
 	}
 
-	return NewBlock(header, txx)
+	return NewBlock(header, txs)
 }
 
 func (b *Block) AddTransaction(tx *Transaction) {
@@ -83,7 +88,7 @@ func (b *Block) Sign(privateKey PrivateKey) error {
 		return err
 	}
 
-	b.Validator = privateKey.PublicKey
+	b.Signer = privateKey.PublicKey
 	b.Signature = sig
 
 	return nil
@@ -94,7 +99,7 @@ func (b *Block) Verify() error {
 		return fmt.Errorf("block has no signature")
 	}
 
-	if !b.Signature.Verify(b.Validator, b.GetHash().ToSlice()) {
+	if !b.Signature.Verify(b.Signer, b.GetHash().ToSlice()) {
 		return fmt.Errorf("block has invalid signature")
 	}
 

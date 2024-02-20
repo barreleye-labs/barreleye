@@ -38,19 +38,23 @@ type Block struct {
 }
 
 type Transaction struct {
-	Hash      string    `json:"hash"`
-	Nonce     string    `json:"nonce"`
-	From      string    `json:"from"`
-	To        string    `json:"to"`
-	Value     string    `json:"value"`
-	Data      string    `json:"data"`
-	Signer    Signer    `json:"signer"`
-	Signature Signature `json:"signature"`
+	Hash        string    `json:"hash"`
+	Nonce       string    `json:"nonce"`
+	BlockHeight int32     `json:"blockHeight"`
+	Timestamp   int64     `json:"timestamp"`
+	From        string    `json:"from"`
+	To          string    `json:"to"`
+	Value       string    `json:"value"`
+	Data        string    `json:"data"`
+	Signer      Signer    `json:"signer"`
+	Signature   Signature `json:"signature"`
 }
 
 func CreateTransaction(
 	hash string,
 	nonce string,
+	blockHeight int32,
+	timestamp int64,
 	from string,
 	to string,
 	value string,
@@ -58,14 +62,16 @@ func CreateTransaction(
 	signer Signer,
 	signature Signature) Transaction {
 	return Transaction{
-		Hash:      hash,
-		Nonce:     nonce,
-		From:      from,
-		To:        to,
-		Value:     value,
-		Data:      data,
-		Signer:    signer,
-		Signature: signature,
+		Hash:        hash,
+		Nonce:       nonce,
+		BlockHeight: blockHeight,
+		Timestamp:   timestamp,
+		From:        from,
+		To:          to,
+		Value:       value,
+		Data:        data,
+		Signer:      signer,
+		Signature:   signature,
 	}
 }
 

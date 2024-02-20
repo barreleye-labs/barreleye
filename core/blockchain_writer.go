@@ -121,7 +121,7 @@ func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
 	}
 
 	_ = bc.logger.Log(
-		"msg", "handle native token transfer",
+		"msg", "transfer",
 		"from", fromAccount.Address,
 		"to", toAccount.Address,
 		"value", amount)
@@ -150,7 +150,7 @@ func (bc *Blockchain) RemoveLastBlock() error {
 		return fmt.Errorf("genesis block can not delete")
 	}
 
-	if err = bc.cancelReward(lastBlock.Validator.Address()); err != nil {
+	if err = bc.cancelReward(lastBlock.Signer.Address()); err != nil {
 		return err
 	}
 

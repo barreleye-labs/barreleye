@@ -6,13 +6,15 @@ import (
 )
 
 type Transaction struct {
-	Nonce     uint64
-	From      common.Address
-	To        common.Address
-	Value     uint64
-	Data      []byte
-	Signer    PublicKey
-	Signature *Signature
+	Nonce       uint64
+	BlockHeight int32
+	Timestamp   int64
+	From        common.Address
+	To          common.Address
+	Value       uint64
+	Data        []byte
+	Signer      PublicKey
+	Signature   *Signature
 
 	Hash common.Hash
 }

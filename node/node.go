@@ -39,7 +39,7 @@ type Node struct {
 	peerMap map[net.Addr]*TCPPeer
 
 	NodeOpts
-	mempool      *TxPool
+	txPool       *TxPool
 	chain        *core.Blockchain
 	isValidator  bool
 	rpcCh        chan RPC
@@ -62,13 +62,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		opts.Logger = log.With(opts.Logger, "🕰", log.DefaultTimestampUTC)
 	}
 
-	var genesis *types.Block = nil
-	if opts.ID == "GENESIS-NODE" {
-		genesis = CreateGenesisBlock(opts.PrivateKey)
-		_ = opts.Logger.Log("msg", "🌞 create genesis block")
-	}
-
-	chain, err := core.NewBlockchain(opts.Logger, opts.PrivateKey, genesis)
+	chain, err := core.NewBlockchain(opts.Logger, opts.PrivateKey, opts.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +77,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		apiNode := restful.NewServer(apiNodeCfg, chain, txChan, opts.PrivateKey)
 		go apiNode.Start()
 
-		opts.Logger.Log("msg", "JSON API Node running", "port", opts.APIListenAddr)
+		_ = opts.Logger.Log("msg", "HTTP API server running", "port", opts.APIListenAddr)
 	}
 
 	peerCh := make(chan *TCPPeer)
@@ -95,7 +89,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		peerMap:      make(map[net.Addr]*TCPPeer),
 		NodeOpts:     opts,
 		chain:        chain,
-		mempool:      NewTxPool(1000),
+		txPool:       NewTxPool(1000),
 		isValidator:  opts.PrivateKey != nil,
 		rpcCh:        make(chan RPC),
 		quitCh:       make(chan struct{}, 1),
@@ -148,14 +142,14 @@ free:
 			go peer.readLoop(n.rpcCh)
 
 			if err := n.sendChainInfoRequestMessage(peer); err != nil {
-				n.Logger.Log("err", err)
+				_ = n.Logger.Log("err", err)
 				continue
 			}
 
 			_ = n.Logger.Log("msg", "🙋 peer added to the Node", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
 
 		case tx := <-n.txChan:
-			if err := n.processTransaction(tx); err != nil {
+			if err := n.handleTransaction(tx); err != nil {
 				_ = n.Logger.Log("process TX error", err)
 			}
 
@@ -166,7 +160,7 @@ free:
 				continue
 			}
 
-			if err = n.RPCProcessor.ProcessMessage(msg); err != nil {
+			if err = n.RPCProcessor.HandleMessage(msg); err != nil {
 				if err != core.ErrBlockKnown {
 					_ = n.Logger.Log("error", err)
 				}
@@ -201,32 +195,32 @@ func (n *Node) mine() error {
 	}
 }
 
-func (n *Node) ProcessMessage(msg *DecodedMessage) error {
+func (n *Node) HandleMessage(msg *DecodedMessage) error {
 	switch t := msg.Data.(type) {
 	case *types.Transaction:
-		return n.processTransaction(t)
+		return n.handleTransaction(t)
 	case *types.Block:
-		return n.processBlock(t)
+		return n.handleBlock(t)
 	case *ChainInfoRequestMessage:
-		return n.processChainInfoRequestMessage(msg.From)
+		return n.handleChainInfoRequestMessage(msg.From)
 	case *ChainInfoResponseMessage:
-		return n.processChainInfoResponseMessage(msg.From, t)
+		return n.handleChainInfoResponseMessage(msg.From, t)
 	case *BlockRequestMessage:
-		return n.processBlockRequestMessage(msg.From, t)
+		return n.handleBlockRequestMessage(msg.From, t)
 	case *BlockResponseMessage:
-		return n.processBlockResponseMessage(msg.From, t)
+		return n.handleBlockResponseMessage(msg.From, t)
 	}
 
 	return nil
 }
 
-func (n *Node) processBlock(b *types.Block) error {
+func (n *Node) handleBlock(b *types.Block) error {
 	s := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(s)
 
 	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(2))*time.Second)
 	if err := n.chain.AddBlock(b); err != nil {
-		n.Logger.Log("error", err.Error())
+		_ = n.Logger.Log("error", err.Error())
 		return err
 	}
 
@@ -235,12 +229,12 @@ func (n *Node) processBlock(b *types.Block) error {
 	return nil
 }
 
-func (n *Node) processTransaction(tx *types.Transaction) error {
+func (n *Node) handleTransaction(tx *types.Transaction) error {
 	if err := tx.Verify(); err != nil {
 		return err
 	}
 
-	if err := n.mempool.Add(tx); err != nil {
+	if err := n.txPool.Add(tx); err != nil {
 		return err
 	}
 
@@ -251,13 +245,13 @@ func (n *Node) processTransaction(tx *types.Transaction) error {
 	_ = n.Logger.Log(
 		"msg", "🗃️ adding new tx to txpool",
 		"hash", hash,
-		"PendingCount", n.mempool.PendingCount(),
+		"PendingCount", n.txPool.PendingCount(),
 	)
 
 	return nil
 }
 
-func (n *Node) processBlockRequestMessage(from net.Addr, data *BlockRequestMessage) error {
+func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessage) error {
 	_ = n.Logger.Log("msg", "📬 received blockRequest message", "from", from)
 
 	height, err := n.chain.ReadLastBlockHeight()
@@ -324,13 +318,17 @@ func (n *Node) broadcast(payload []byte) error {
 	defer n.mu.RUnlock()
 	for netAddr, peer := range n.peerMap {
 		if err := peer.Send(payload); err != nil {
-			fmt.Printf("peer send error => addr %s [err: %s]\n", netAddr, err)
+			if err = peer.Close(); err != nil {
+				return err
+			}
+			delete(n.peerMap, netAddr)
+			fmt.Printf("communication with peer has been lost and no further transmissions will be made..\nwrite error: ", err)
 		}
 	}
 	return nil
 }
 
-func (n *Node) processBlockResponseMessage(from net.Addr, data *BlockResponseMessage) error {
+func (n *Node) handleBlockResponseMessage(from net.Addr, data *BlockResponseMessage) error {
 	_ = n.Logger.Log("msg", "📦 received the requested block", "height:", data.Block.Height, "from", from)
 
 	if data.Block == nil {
@@ -356,8 +354,8 @@ func (n *Node) processBlockResponseMessage(from net.Addr, data *BlockResponseMes
 	return nil
 }
 
-func (n *Node) processChainInfoResponseMessage(from net.Addr, data *ChainInfoResponseMessage) error {
-	n.Logger.Log("msg", "📬 received chain info response message", "from", from)
+func (n *Node) handleChainInfoResponseMessage(from net.Addr, data *ChainInfoResponseMessage) error {
+	_ = n.Logger.Log("msg", "📬 received chain info response message", "from", from, "height", data.CurrentHeight)
 
 	height, err := n.chain.ReadLastBlockHeight()
 	if err != nil {
@@ -380,7 +378,7 @@ func (n *Node) processChainInfoResponseMessage(from net.Addr, data *ChainInfoRes
 	return nil
 }
 
-func (n *Node) processChainInfoRequestMessage(from net.Addr) error {
+func (n *Node) handleChainInfoRequestMessage(from net.Addr) error {
 	_ = n.Logger.Log("msg", "📬 received chain info request message", "from", from)
 
 	height, err := n.chain.ReadLastBlockHeight()
@@ -472,7 +470,7 @@ func (n *Node) sealBlock() error {
 		return fmt.Errorf("can not seal the block without genesis block")
 	}
 
-	txs := n.mempool.Pending()
+	txs := n.txPool.Pending()
 
 	for i := 0; i < len(txs); i++ {
 		txProcessed, err := n.chain.ReadTxByHash(txs[i].Hash)
@@ -519,42 +517,9 @@ func (n *Node) sealBlock() error {
 		return err
 	}
 
-	n.mempool.ClearPending()
+	n.txPool.ClearPending()
 
 	go n.broadcastBlock(block)
 
 	return nil
-}
-
-func CreateGenesisBlock(privateKey *types.PrivateKey) *types.Block {
-	//coinbase := privateKey.PublicKey()
-
-	//tx := &types.Transaction{
-	//	Nonce: 171, //ab
-	//	From:  coinbase.Address(),
-	//	To:    coinbase.Address(),
-	//	Value: 171, //ab
-	//	Data:  []byte{171},
-	//}
-
-	//if err := tx.Sign(*privateKey); err != nil {
-	//	panic(err)
-	//}
-
-	header := &types.Header{
-		Version:   1,
-		Height:    0,
-		Timestamp: time.Now().UnixNano(),
-	}
-
-	b, _ := types.NewBlock(header, nil)
-
-	//b.Transactions = append(b.Transactions, tx)
-	//hash, _ := types.CalculateDataHash(b.Transactions)
-	//b.DataHash = hash
-
-	if err := b.Sign(*privateKey); err != nil {
-		panic(err)
-	}
-	return b
 }

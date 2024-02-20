@@ -12,6 +12,11 @@ type TCPPeer struct {
 	Outgoing bool
 }
 
+func (p *TCPPeer) Close() error {
+	err := p.conn.Close()
+	return err
+}
+
 func (p *TCPPeer) Send(b []byte) error {
 	_, err := p.conn.Write(b)
 	return err
@@ -25,8 +30,8 @@ func (p *TCPPeer) readLoop(rpcCh chan RPC) {
 			continue
 		}
 		if err != nil {
-			fmt.Printf("read error: %s", err)
-			continue
+			fmt.Printf("communication with peer has been lost and will no longer be received.\nread error: %s", err)
+			return
 		}
 
 		msg := buf[:n]
