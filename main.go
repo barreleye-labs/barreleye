@@ -30,11 +30,11 @@ func main() {
 	if nodeName == "genesis-node" {
 		node1 := createNode("GENESIS-NODE", privateKey, ":3000", []string{":4000"}, ":9000")
 		node1.Start()
-	} else if nodeName == "wayne" {
-		node2 := createNode("WAYNE", privateKey, ":4000", []string{":3000"}, ":9001")
+	} else if nodeName == "nayoung" {
+		node2 := createNode("NAYOUNG", privateKey, ":4000", []string{":3000"}, ":9001")
 		node2.Start()
-	} else if nodeName == "usi" {
-		node3 := createNode("USI", privateKey, ":5000", []string{":4000"}, "")
+	} else if nodeName == "youngmin" {
+		node3 := createNode("YOUNGMIN", privateKey, ":5000", []string{":4000"}, ":9002")
 		node3.Start()
 	}
 

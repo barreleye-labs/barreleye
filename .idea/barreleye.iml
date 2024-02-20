@@ -10,6 +10,8 @@
       <excludeFolder url="file://$MODULE_DIR$/node3" />
       <excludeFolder url="file://$MODULE_DIR$/barreldb/genesis-node" />
       <excludeFolder url="file://$MODULE_DIR$/barreldb/wayne" />
+      <excludeFolder url="file://$MODULE_DIR$/barreldb/nayoung" />
+      <excludeFolder url="file://$MODULE_DIR$/barreldb/youngmin" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

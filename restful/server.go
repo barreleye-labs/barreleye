@@ -129,6 +129,7 @@ func (s *Server) getAccount(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, dto.AccountResponse{Account: dto.Account{
 		Address: result.Address.String(),
+		Nonce:   hex.EncodeToString(util.Uint64ToBytes(result.Nonce)),
 		Balance: hex.EncodeToString(util.Uint64ToBytes(result.Balance)),
 	}})
 }

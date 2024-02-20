@@ -313,10 +313,11 @@ func (bc *Blockchain) cancelReward(address common.Address) error {
 	}
 
 	if account == nil {
-		account = types.CreateAccount(address)
-		if err = bc.WriteAccountWithAddress(account.Address, account); err != nil {
-			return err
-		}
+		return fmt.Errorf("not found account to cancel reward")
+	}
+
+	if account.Balance < config.BlockReward {
+		return fmt.Errorf("not enough balance to cancel reward")
 	}
 
 	if err = bc.db.DecreaseAccountBalance(address, config.BlockReward); err != nil {
@@ -338,7 +339,7 @@ func (bc *Blockchain) GiveReward(address common.Address) error {
 		}
 	}
 
-	if err = bc.db.IncreaseAccountBalance(account.Address, uint64(config.BlockReward)); err != nil {
+	if err = bc.db.IncreaseAccountBalance(account.Address, config.BlockReward); err != nil {
 		return err
 	}
 	return nil
