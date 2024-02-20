@@ -7,11 +7,11 @@ run: build
 genesis-node: build
 	./bin/barreleye -nodeName=genesis-node
 
-wayne: build
-	./bin/barreleye -nodeName=wayne
+nayoung: build
+	./bin/barreleye -nodeName=nayoung
 
-usi: build
-	./bin/barreleye -nodeName=usi
+youngmin: build
+	./bin/barreleye -nodeName=youngmin
 
 test:
 	go test ./...

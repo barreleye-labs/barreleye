@@ -71,6 +71,7 @@ func CreateTransaction(
 
 type Account struct {
 	Address string `json:"address"`
+	Nonce   string `json:"nonce"`
 	Balance string `json:"balance"`
 }
 
