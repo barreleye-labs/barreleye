@@ -16,7 +16,10 @@ type BarrelDatabase struct {
 }
 
 func New() (*BarrelDatabase, error) {
-	db, _ := leveldb.OpenFile(DefaultDataDir(), nil)
+	db, err := leveldb.OpenFile(DefaultDataDir(), nil)
+	if err != nil {
+		return nil, err
+	}
 	return &BarrelDatabase{db: db, tables: make(map[string]*Table)}, nil
 }
 

@@ -38,25 +38,6 @@ func main() {
 		node3.Start()
 	}
 
-	// fmt.Println("kyma:", nodeInfo.Node1.Endpoint)
-
-	// validatorPrivKey := crypto.GeneratePrivateKey()
-	// localNode := makeServer("LOCAL_NODE", &validatorPrivKey, "localhost:3000", []string{"localhost:4000"}, ":9000")
-	// go localNode.Start()
-
-	// remoteNode := makeServer("REMOTE_NODE", nil, "localhost:4000", []string{"localhost:5000"}, "")
-	// go remoteNode.Start()
-
-	// remoteNodeB := makeServer("REMOTE_NODE_B", nil, "localhost:5000", nil, "")
-	// go remoteNodeB.Start()
-
-	// go func() {
-	// 	time.Sleep(11 * time.Second)
-
-	// 	lateNode := makeServer("LATE_NODE", nil, ":6000", []string{"localhost:4000"}, "")
-	// 	go lateNode.Start()
-	// }()
-
 	time.Sleep(1 * time.Second)
 
 	select {}

@@ -98,6 +98,8 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 	txDTO := dto.CreateTransaction(
 		tx.Hash.String(),
 		hex.EncodeToString(util.Uint64ToBytes(tx.Nonce)),
+		-1,
+		-1,
 		tx.From.String(),
 		tx.To.String(),
 		hex.EncodeToString(util.Uint64ToBytes(tx.Value)),
@@ -158,7 +160,7 @@ func (s *Server) getLastBlock(c echo.Context) error {
 		result.PrevBlockHash.String(),
 		result.Height,
 		result.Timestamp,
-		result.Validator.Address().String(),
+		result.Signer.Address().String(),
 		signature,
 		uint32(len(result.Transactions)),
 		transactions)
@@ -192,6 +194,8 @@ func (s *Server) getTxs(c echo.Context) error {
 		tx := dto.CreateTransaction(
 			result[i].Hash.String(),
 			hex.EncodeToString(util.Uint64ToBytes(result[i].Nonce)),
+			result[i].BlockHeight,
+			result[i].Timestamp,
 			result[i].From.String(),
 			result[i].To.String(),
 			hex.EncodeToString(util.Uint64ToBytes(result[i].Value)),
@@ -249,7 +253,7 @@ func (s *Server) getBlocks(c echo.Context) error {
 			result[i].PrevBlockHash.String(),
 			result[i].Height,
 			result[i].Timestamp,
-			result[i].Validator.Address().String(),
+			result[i].Signer.Address().String(),
 			signature,
 			uint32(len(result[i].Transactions)),
 			transactions)
@@ -321,6 +325,8 @@ func (s *Server) postTx(c echo.Context) error {
 	txDTO := dto.CreateTransaction(
 		tx.Hash.String(),
 		hex.EncodeToString(util.Uint64ToBytes(tx.Nonce)),
+		-1,
+		-1,
 		payload.From,
 		payload.To,
 		payload.Value,
@@ -364,6 +370,8 @@ func (s *Server) getTx(c echo.Context) error {
 	tx := dto.CreateTransaction(
 		result.Hash.String(),
 		hex.EncodeToString(util.Uint64ToBytes(result.Nonce)),
+		result.BlockHeight,
+		result.Timestamp,
 		result.From.String(),
 		result.To.String(),
 		hex.EncodeToString(util.Uint64ToBytes(result.Value)),
@@ -415,7 +423,7 @@ func (s *Server) getBlock(c echo.Context) error {
 		result.PrevBlockHash.String(),
 		result.Height,
 		result.Timestamp,
-		result.Validator.Address().String(),
+		result.Signer.Address().String(),
 		signature,
 		uint32(len(result.Transactions)),
 		transactions)
