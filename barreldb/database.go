@@ -59,11 +59,11 @@ func DefaultDataDir() string {
 	_, filename, _, _ := runtime.Caller(0)
 	root := path.Join(path.Dir(filename), "../barreldb")
 
-	if flag.Lookup("nodeName") == nil {
+	if flag.Lookup("name") == nil {
 		return filepath.Join(root, "data")
 	}
 
-	nodeName := flag.Lookup("nodeName").Value.(flag.Getter).Get().(string)
+	nodeName := flag.Lookup("name").Value.(flag.Getter).Get().(string)
 
 	return filepath.Join(root, nodeName)
 

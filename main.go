@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/barreleye-labs/barreleye/common"
-	"github.com/barreleye-labs/barreleye/config"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
 	"time"
@@ -11,7 +10,12 @@ import (
 )
 
 func main() {
-	nodeName := common.GetFlag()
+	common.ParseFlag()
+	nodeName := common.GetFlag("name")
+	port := common.GetFlag("port")
+	peer := common.GetFlag("peer")
+	httpPort := common.GetFlag("http.port")
+	key := common.GetFlag("key")
 
 	/* create hex key
 	nodePrivateKey := types.GeneratePrivateKey()
@@ -21,22 +25,13 @@ func main() {
 	fmt.Println("pk: ", hexPrivateKey)
 	*/
 
-	conf := config.GetConfig(nodeName)
-	privateKey, err := types.CreatePrivateKey(conf.PrivateKey)
+	privateKey, err := types.CreatePrivateKey(key)
 	if err != nil {
 		panic("failed to create private key")
 	}
 
-	if nodeName == "genesis-node" {
-		node1 := createNode("GENESIS-NODE", privateKey, ":3000", []string{":4000"}, ":9000")
-		node1.Start()
-	} else if nodeName == "nayoung" {
-		node2 := createNode("NAYOUNG", privateKey, ":4000", []string{":3000"}, ":9001")
-		node2.Start()
-	} else if nodeName == "youngmin" {
-		node3 := createNode("YOUNGMIN", privateKey, ":5000", []string{":4000"}, ":9002")
-		node3.Start()
-	}
+	node1 := createNode(nodeName, privateKey, ":"+port, []string{peer}, ":"+httpPort)
+	node1.Start()
 
 	time.Sleep(1 * time.Second)
 

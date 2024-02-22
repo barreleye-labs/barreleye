@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/barreldb"
+	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"sync"
 	"time"
@@ -88,7 +89,7 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, nodeID string) (*
 		}
 	}
 
-	if nodeID == "GENESIS-NODE" {
+	if common.GetFlag("role") == "g" {
 		lastBlock, err := bc.ReadLastBlock()
 		if err != nil {
 			return nil, err
