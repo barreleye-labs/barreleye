@@ -85,6 +85,7 @@ You can connect infinite nodes as shown above. As you can see from the log, node
 
 # **Specification.**
 * `Block time` - 10 seconds on average.<br>
+* `Block reward` - 10 barrel per block.<br>
 * `Hash algorithm` - SHA256.<br>
 * `Cryptography algorithm` - ECDSA secp256k1.<br>
 * `Consensus algorithm` - Proof of random
