@@ -41,6 +41,7 @@ type Block struct {
 	Signer       PublicKey
 	Signature    *Signature
 
+	Extra string
 	// Cached version of the header hash
 	Hash common.Hash
 }
@@ -56,6 +57,7 @@ func NewBlock(h *Header, txs []*Transaction) (*Block, error) {
 		Transactions: txs,
 	}
 	block.Hash = block.GetHash()
+	block.Extra = common.GetFlag("name")
 	return block, nil
 }
 
