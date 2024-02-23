@@ -64,7 +64,9 @@ $ ./{file_name}.sh
 <br>
 
 <img width="1210" alt="tutorial1" src="https://github.com/barreleye-labs/barreleye/assets/48827393/abc5a149-024a-449e-afb2-675822b3c7e2">
+<br>
 If this is the first node in your private network, it will stop at a line like the one above. This is because mining begins only when two or more nodes participate. Run two or more nodes.
+<br>
 
 ![MergedImages](https://github.com/barreleye-labs/barreleye/assets/48827393/e84562af-6f64-4e72-ab41-16a18031fa68)
 
