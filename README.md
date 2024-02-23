@@ -62,7 +62,6 @@ $ ./{file_name}.sh
 
 * Result of executing the command.
 <br>
-
 <img width="1210" alt="tutorial1" src="https://github.com/barreleye-labs/barreleye/assets/48827393/abc5a149-024a-449e-afb2-675822b3c7e2">
 <br>
 <br>
