@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"sync"
 )
@@ -21,15 +22,25 @@ func NewTxPool(maxLength int) *TxPool {
 	}
 }
 
-func (p *TxPool) Add(tx *types.Transaction) error {
+func (p *TxPool) Add(tx *types.Transaction, chain *core.Blockchain) error {
 	if p.pending.Contains(tx.GetHash()) {
-		return fmt.Errorf("this transaction is already pending transaction")
+		return core.ErrTransactionAlreadyPending
 	}
 
 	txs := p.Pending()
 	for i := 0; i < len(txs); i++ {
 		if txs[i].From == tx.From {
-			return fmt.Errorf("this account already has a pending transaction")
+			txProcessed, err := chain.ReadTxByHash(txs[i].Hash)
+			if err != nil {
+				return err
+			}
+
+			if txProcessed == nil {
+				return fmt.Errorf("this account already has a pending transaction")
+			}
+
+			p.pending.Remove(txs[i].Hash)
+			break
 		}
 	}
 

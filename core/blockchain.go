@@ -89,7 +89,7 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, nodeID string) (*
 		}
 	}
 
-	if common.GetFlag("role") == "g" {
+	if common.GetFlag("role") == "genesis" {
 		lastBlock, err := bc.ReadLastBlock()
 		if err != nil {
 			return nil, err
@@ -256,10 +256,10 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 	}
 
 	_ = bc.logger.Log(
-		"msg", "🔗 add new block",
+		"msg", "🔗 link new block",
 		"hash", b.GetHash(),
 		"height", b.Height,
-		"transactions", len(b.Transactions),
+		"txCount", len(b.Transactions),
 	)
 
 	return nil

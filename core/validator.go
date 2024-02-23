@@ -8,6 +8,7 @@ import (
 )
 
 var ErrBlockKnown = errors.New("block already known")
+var ErrTransactionAlreadyPending = errors.New("this transaction is already pending transaction")
 
 type Validator interface {
 	ValidateBlock(*types.Block) error

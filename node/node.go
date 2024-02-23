@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"math/rand"
@@ -16,7 +17,7 @@ import (
 	"github.com/go-kit/log"
 )
 
-var defaultBlockTime = 5 * time.Second
+var defaultBlockTime = 7 * time.Second
 
 type NodeOpts struct {
 	APIListenAddr string
@@ -131,7 +132,7 @@ func (n *Node) Start() {
 
 	n.bootstrapNetwork()
 
-	_ = n.Logger.Log("msg", "🤝 accepting TCP connection on", "addr", n.ListenAddr, "id", n.ID)
+	_ = n.Logger.Log("msg", "🤝 Ready to connect with peers", "port", n.ListenAddr, "name", n.ID)
 
 free:
 	for {
@@ -146,7 +147,7 @@ free:
 				continue
 			}
 
-			_ = n.Logger.Log("msg", "🙋 peer added to the Node", "outgoing", peer.Outgoing, "addr", peer.conn.RemoteAddr())
+			_ = n.Logger.Log("msg", "🙋 connected peer", "peer", peer.conn.RemoteAddr())
 
 		case tx := <-n.txChan:
 			if err := n.handleTransaction(tx); err != nil {
@@ -161,7 +162,7 @@ free:
 			}
 
 			if err = n.RPCProcessor.HandleMessage(msg); err != nil {
-				if err != core.ErrBlockKnown {
+				if !errors.Is(err, core.ErrBlockKnown) && !errors.Is(err, core.ErrTransactionAlreadyPending) {
 					_ = n.Logger.Log("error", err)
 				}
 			}
@@ -218,9 +219,9 @@ func (n *Node) handleBlock(b *types.Block) error {
 	s := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(s)
 
-	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(2))*time.Second)
+	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(7))*time.Second)
 	if err := n.chain.AddBlock(b); err != nil {
-		_ = n.Logger.Log("error", err.Error())
+		//_ = n.Logger.Log("error", err.Error())
 		return err
 	}
 
@@ -234,7 +235,7 @@ func (n *Node) handleTransaction(tx *types.Transaction) error {
 		return err
 	}
 
-	if err := n.txPool.Add(tx); err != nil {
+	if err := n.txPool.Add(tx, n.chain); err != nil {
 		return err
 	}
 

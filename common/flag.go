@@ -9,7 +9,7 @@ func ParseFlag() {
 	flag.String("role", "", "if genesis node -> g, if normal node -> n")
 	flag.String("port", "", "port")
 	flag.String("http.port", "", "http port")
-	flag.String("peer", "", "peer")
+	flag.String("peers", "", "peers")
 	flag.String("key", "", "private key")
 	flag.Parse()
 }
