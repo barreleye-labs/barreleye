@@ -4,6 +4,7 @@ import (
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/barreleye-labs/barreleye/node"
@@ -13,9 +14,14 @@ func main() {
 	common.ParseFlag()
 	nodeName := common.GetFlag("name")
 	port := common.GetFlag("port")
-	peer := common.GetFlag("peer")
+	peers := common.GetFlag("peers")
 	httpPort := common.GetFlag("http.port")
 	key := common.GetFlag("key")
+
+	peerArr := []string{}
+	if peers != "none" {
+		peerArr = strings.Split(peers, ",")
+	}
 
 	/* create hex key
 	nodePrivateKey := types.GeneratePrivateKey()
@@ -30,7 +36,7 @@ func main() {
 		panic("failed to create private key")
 	}
 
-	node1 := createNode(nodeName, privateKey, ":"+port, []string{peer}, ":"+httpPort)
+	node1 := createNode(nodeName, privateKey, ":"+port, peerArr, ":"+httpPort)
 	node1.Start()
 
 	time.Sleep(1 * time.Second)
