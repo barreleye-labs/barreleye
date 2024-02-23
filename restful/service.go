@@ -117,6 +117,7 @@ func (s *Server) getLastBlock(c echo.Context) error {
 		result.Height,
 		result.Timestamp,
 		result.Signer.Address().String(),
+		result.Extra,
 		signature,
 		uint32(len(result.Transactions)),
 		transactions)
@@ -210,6 +211,7 @@ func (s *Server) getBlocks(c echo.Context) error {
 			result[i].Height,
 			result[i].Timestamp,
 			result[i].Signer.Address().String(),
+			result[i].Extra,
 			signature,
 			uint32(len(result[i].Transactions)),
 			transactions)
@@ -380,6 +382,7 @@ func (s *Server) getBlock(c echo.Context) error {
 		result.Height,
 		result.Timestamp,
 		result.Signer.Address().String(),
+		result.Extra,
 		signature,
 		uint32(len(result.Transactions)),
 		transactions)

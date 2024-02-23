@@ -8,6 +8,7 @@ type Block struct {
 	Height        int32     `json:"height"`
 	Timestamp     int64     `json:"timestamp"`
 	Signer        string    `json:"signer"`
+	Extra         string    `json:"extra"`
 	Signature     Signature `json:"signature"`
 	TxCount       uint32    `json:"txCount"`
 	Transactions  []string  `json:"transactions"`
@@ -21,6 +22,7 @@ func CreateBlock(
 	height int32,
 	timestamp int64,
 	signer string,
+	extra string,
 	signature Signature,
 	txCount uint32,
 	transactions []string) Block {
@@ -32,6 +34,7 @@ func CreateBlock(
 		Height:        height,
 		Timestamp:     timestamp,
 		Signer:        signer,
+		Extra:         extra,
 		Signature:     signature,
 		TxCount:       txCount,
 		Transactions:  transactions,
