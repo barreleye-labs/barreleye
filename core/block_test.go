@@ -10,30 +10,30 @@ import (
 )
 
 func TestSignBlock(t *testing.T) {
-	privKey := types.GeneratePrivateKey()
+	privateKey := types.GeneratePrivateKey()
 	b := randomBlock(t, 0, common.Hash{})
 
-	assert.Nil(t, b.Sign(privKey))
+	assert.Nil(t, b.Sign(*privateKey))
 	assert.NotNil(t, b.Signature)
 }
 
 func TestVerifyBlock(t *testing.T) {
-	privKey := types.GeneratePrivateKey()
+	alicePrivateKey := types.GeneratePrivateKey()
 	b := randomBlock(t, 0, common.Hash{})
 
-	assert.Nil(t, b.Sign(privKey))
+	assert.Nil(t, b.Sign(*alicePrivateKey))
 	assert.Nil(t, b.Verify())
 
-	otherPrivKey := types.GeneratePrivateKey()
-	b.Validator = otherPrivKey.PublicKey()
+	bobPrivateKey := types.GeneratePrivateKey()
+	b.Signer = bobPrivateKey.PublicKey
 	assert.NotNil(t, b.Verify())
 
 	b.Height = 100
 	assert.NotNil(t, b.Verify())
 }
 
-func randomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *types.Block {
-	privKey := types.GeneratePrivateKey()
+func randomBlock(t *testing.T, height int32, prevBlockHash common.Hash) *types.Block {
+	privateKey := types.GeneratePrivateKey()
 	tx := randomTxWithSignature(t)
 	header := &types.Header{
 		Version:       1,
@@ -47,7 +47,7 @@ func randomBlock(t *testing.T, height uint32, prevBlockHash common.Hash) *types.
 	dataHash, err := types.CalculateDataHash(b.Transactions)
 	assert.Nil(t, err)
 	b.Header.DataHash = dataHash
-	assert.Nil(t, b.Sign(privKey))
+	assert.Nil(t, b.Sign(*privateKey))
 	return b
 }
 
@@ -65,6 +65,6 @@ func TestDecodeEncodeBlock(t *testing.T) {
 		assert.Equal(t, b.Transactions[i], bDecode.Transactions[i])
 	}
 
-	assert.Equal(t, b.Validator, bDecode.Validator)
+	assert.Equal(t, b.Signer, bDecode.Signer)
 	assert.Equal(t, b.Signature, bDecode.Signature)
 }

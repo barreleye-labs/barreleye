@@ -12,71 +12,22 @@ import (
 )
 
 type Blockchain struct {
-	logger        log.Logger
-	store         Storage
-	lock          sync.RWMutex
-	stateLock     sync.RWMutex
-	validator     Validator
-	contractState *State
-	db            *barreldb.BarrelDatabase
+	logger    log.Logger
+	lock      sync.RWMutex
+	validator Validator
+	db        *barreldb.BarrelDatabase
 }
 
-func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, nodeID string) (*Blockchain, error) {
+func NewBlockchain(l log.Logger, privateKey *types.PrivateKey) (*Blockchain, error) {
 	db, _ := barreldb.New()
 
-	err := db.CreateTable(barreldb.HashBlockTableName, barreldb.HashBlockPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = db.CreateTable(barreldb.HeightBlockTableName, barreldb.HeightBlockPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = db.CreateTable(barreldb.LastBlockTableName, barreldb.LastBlockPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.CreateTable(barreldb.HashHeaderTableName, barreldb.HashHeaderPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = db.CreateTable(barreldb.HeightHeaderTableName, barreldb.HeightHeaderPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = db.CreateTable(barreldb.LastHeaderTableName, barreldb.LastHeaderPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.CreateTable(barreldb.HashTxTableName, barreldb.HashTxPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = db.CreateTable(barreldb.NumberTxTableName, barreldb.NumberTxPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = db.CreateTable(barreldb.LastTxTableName, barreldb.LastTxPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = db.CreateTable(barreldb.LastTxNumberTableName, barreldb.LastTxNumberPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.CreateTable(barreldb.AddressAccountTableName, barreldb.AddressAccountPrefix)
-	if err != nil {
+	if err := setTables(db); err != nil {
 		return nil, err
 	}
 
 	bc := &Blockchain{
-		contractState: NewState(),
-		store:         NewMemorystore(),
-		logger:        l,
-		db:            db,
+		logger: l,
+		db:     db,
 	}
 	bc.validator = NewBlockValidator(bc)
 
@@ -84,7 +35,7 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, nodeID string) (*
 		coinbase := privateKey.PublicKey
 
 		coinbaseAccount := types.CreateAccount(coinbase.Address())
-		if err = bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount); err != nil {
+		if err := bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount); err != nil {
 			return nil, err
 		}
 	}
@@ -108,21 +59,58 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey, nodeID string) (*
 	return bc, nil
 }
 
+func setTables(db *barreldb.BarrelDatabase) error {
+	err := db.CreateTable(barreldb.HashBlockTableName, barreldb.HashBlockPrefix)
+	if err != nil {
+		return err
+	}
+	err = db.CreateTable(barreldb.HeightBlockTableName, barreldb.HeightBlockPrefix)
+	if err != nil {
+		return err
+	}
+	err = db.CreateTable(barreldb.LastBlockTableName, barreldb.LastBlockPrefix)
+	if err != nil {
+		return err
+	}
+
+	err = db.CreateTable(barreldb.HashHeaderTableName, barreldb.HashHeaderPrefix)
+	if err != nil {
+		return err
+	}
+	err = db.CreateTable(barreldb.HeightHeaderTableName, barreldb.HeightHeaderPrefix)
+	if err != nil {
+		return err
+	}
+	err = db.CreateTable(barreldb.LastHeaderTableName, barreldb.LastHeaderPrefix)
+	if err != nil {
+		return err
+	}
+
+	err = db.CreateTable(barreldb.HashTxTableName, barreldb.HashTxPrefix)
+	if err != nil {
+		return err
+	}
+	err = db.CreateTable(barreldb.NumberTxTableName, barreldb.NumberTxPrefix)
+	if err != nil {
+		return err
+	}
+	err = db.CreateTable(barreldb.LastTxTableName, barreldb.LastTxPrefix)
+	if err != nil {
+		return err
+	}
+	err = db.CreateTable(barreldb.LastTxNumberTableName, barreldb.LastTxNumberPrefix)
+	if err != nil {
+		return err
+	}
+
+	err = db.CreateTable(barreldb.AddressAccountTableName, barreldb.AddressAccountPrefix)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func CreateGenesisBlock(privateKey *types.PrivateKey) *types.Block {
-	//coinbase := privateKey.PublicKey()
-
-	//tx := &types.Transaction{
-	//	Nonce: 171, //ab
-	//	From:  coinbase.Address(),
-	//	To:    coinbase.Address(),
-	//	Value: 171, //ab
-	//	Data:  []byte{171},
-	//}
-
-	//if err := tx.Sign(*privateKey); err != nil {
-	//	panic(err)
-	//}
-
 	header := &types.Header{
 		Version:   1,
 		Height:    0,
@@ -130,10 +118,6 @@ func CreateGenesisBlock(privateKey *types.PrivateKey) *types.Block {
 	}
 
 	b, _ := types.NewBlock(header, nil)
-
-	//b.Transactions = append(b.Transactions, tx)
-	//hash, _ := types.CalculateDataHash(b.Transactions)
-	//b.DataHash = hash
 
 	if err := b.Sign(*privateKey); err != nil {
 		panic(err)
@@ -171,15 +155,6 @@ func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
 
 	if account.Nonce != tx.Nonce {
 		return fmt.Errorf("invalid tx nonce")
-	}
-
-	if len(tx.Data) > 0 {
-		_ = bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.GetHash())
-
-		vm := NewVM(tx.Data, bc.contractState)
-		if err := vm.Run(); err != nil {
-			return err
-		}
 	}
 
 	if err := bc.Transfer(tx.From, tx.To, tx.Value); err != nil {

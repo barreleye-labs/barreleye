@@ -2,6 +2,7 @@ package barreldb
 
 import (
 	"flag"
+	"github.com/barreleye-labs/barreleye/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
 	"os/user"
@@ -57,15 +58,15 @@ func (barrelDB *BarrelDatabase) Delete(key []byte) error {
 
 func DefaultDataDir() string {
 	_, filename, _, _ := runtime.Caller(0)
-	root := path.Join(path.Dir(filename), "../barreldb")
+	pwd := path.Dir(filename)
 
 	if flag.Lookup("name") == nil {
-		return filepath.Join(root, "data")
+		return filepath.Join(pwd, "data")
 	}
 
 	nodeName := flag.Lookup("name").Value.(flag.Getter).Get().(string)
 
-	return filepath.Join(root, nodeName)
+	return filepath.Join(pwd, nodeName)
 
 	//// Try to place the data folder in the user's home dir
 	//home := homeDir()
@@ -89,6 +90,15 @@ func DefaultDataDir() string {
 	//}
 	//// As we cannot guess a stable location, return empty and handle later
 	//return ""
+}
+
+func RemoveData(targetDir string) error {
+	err := os.Remove(filepath.Join(common.GetProjectRootPath(), targetDir))
+	if err != nil {
+		return err
+
+	}
+	return nil
 }
 
 func windowsAppData() string {

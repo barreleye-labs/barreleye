@@ -53,13 +53,11 @@ type DecodedMessage struct {
 
 type RPCDecodeFunc func(RPC) (*DecodedMessage, error)
 
-func DefaultRPCDecodeFunc(rpc RPC) (*DecodedMessage, error) {
+func DecodeRPCDefaultFunc(rpc RPC) (*DecodedMessage, error) {
 	msg := Message{}
 	if err := gob.NewDecoder(rpc.Payload).Decode(&msg); err != nil {
 		return nil, fmt.Errorf("failed to decode message from %s: %s", rpc.From, err)
 	}
-
-	// fmt.Printf("receiving message: %+v\n", msg)
 
 	logrus.WithFields(logrus.Fields{
 		"from": rpc.From,
