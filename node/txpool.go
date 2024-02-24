@@ -9,9 +9,7 @@ import (
 )
 
 type TxPool struct {
-	pending *TxSortedMap
-	// 풀 사이즈
-	// 풀이 가득차면 가장 오래된 트랜잭션부터 프루닝할 것.
+	pending   *TxSortedMap
 	maxLength int
 }
 
@@ -57,9 +55,8 @@ func (p *TxPool) Contains(hash common.Hash) bool {
 	return p.pending.Contains(hash)
 }
 
-// Pending returns a slice of transactions that are in the pending pool
 func (p *TxPool) Pending() []*types.Transaction {
-	return p.pending.txx.Data
+	return p.pending.txs.Data
 }
 
 func (p *TxPool) ClearPending() {
@@ -73,13 +70,13 @@ func (p *TxPool) PendingCount() int {
 type TxSortedMap struct {
 	lock   sync.RWMutex
 	lookup map[common.Hash]*types.Transaction
-	txx    *common.List[*types.Transaction]
+	txs    *common.List[*types.Transaction]
 }
 
 func NewTxSortedMap() *TxSortedMap {
 	return &TxSortedMap{
 		lookup: make(map[common.Hash]*types.Transaction),
-		txx:    common.NewList[*types.Transaction](),
+		txs:    common.NewList[*types.Transaction](),
 	}
 }
 
@@ -87,7 +84,7 @@ func (t *TxSortedMap) First() *types.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	first := t.txx.Get(0)
+	first := t.txs.Get(0)
 	return t.lookup[first.GetHash()]
 }
 
@@ -106,7 +103,7 @@ func (t *TxSortedMap) Add(tx *types.Transaction) {
 
 	if _, ok := t.lookup[hash]; !ok {
 		t.lookup[hash] = tx
-		t.txx.Insert(tx)
+		t.txs.Insert(tx)
 	}
 }
 
@@ -114,7 +111,7 @@ func (t *TxSortedMap) Remove(h common.Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.txx.Remove(t.lookup[h])
+	t.txs.Remove(t.lookup[h])
 	delete(t.lookup, h)
 }
 
@@ -138,5 +135,5 @@ func (t *TxSortedMap) Clear() {
 	defer t.lock.Unlock()
 
 	t.lookup = make(map[common.Hash]*types.Transaction)
-	t.txx.Clear()
+	t.txs.Clear()
 }

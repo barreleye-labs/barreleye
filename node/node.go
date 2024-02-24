@@ -24,7 +24,7 @@ type NodeOpts struct {
 	SeedNodes     []string
 	ListenAddr    string
 	TCPTransport  *TCPTransport
-	ID            string
+	Name          string
 	Logger        log.Logger
 	RPCDecodeFunc RPCDecodeFunc
 	RPCProcessor  RPCProcessor
@@ -56,14 +56,14 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		opts.BlockTime = defaultBlockTime
 	}
 	if opts.RPCDecodeFunc == nil {
-		opts.RPCDecodeFunc = DefaultRPCDecodeFunc
+		opts.RPCDecodeFunc = DecodeRPCDefaultFunc
 	}
 	if opts.Logger == nil {
 		opts.Logger = log.NewLogfmtLogger(os.Stderr)
 		opts.Logger = log.With(opts.Logger, "🕰", log.DefaultTimestampUTC)
 	}
 
-	chain, err := core.NewBlockchain(opts.Logger, opts.PrivateKey, opts.ID)
+	chain, err := core.NewBlockchain(opts.Logger, opts.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (n *Node) Start() {
 
 	n.bootstrapNetwork()
 
-	_ = n.Logger.Log("msg", "🤝 Ready to connect with peers", "port", n.ListenAddr, "name", n.ID)
+	_ = n.Logger.Log("msg", "🤝 Ready to connect with peers", "port", n.ListenAddr, "name", n.Name)
 
 free:
 	for {
@@ -392,7 +392,7 @@ func (n *Node) handleChainInfoRequestMessage(from net.Addr) error {
 func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
 	chainInfoResponseMessage := &ChainInfoResponseMessage{
 		CurrentHeight: height,
-		ID:            n.ID,
+		To:            n.Name,
 	}
 
 	buf := new(bytes.Buffer)

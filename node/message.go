@@ -16,7 +16,7 @@ type ChainInfoRequestMessage struct {
 }
 
 type ChainInfoResponseMessage struct {
-	ID            string
+	To            string
 	Version       uint32
 	CurrentHeight int32
 }

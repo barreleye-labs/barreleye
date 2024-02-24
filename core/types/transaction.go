@@ -19,6 +19,40 @@ type Transaction struct {
 	Hash common.Hash
 }
 
+func CreateTransaction(
+	nonce uint64,
+	from common.Address,
+	to common.Address,
+	value uint64,
+	data []byte) *Transaction {
+	return &Transaction{
+		Nonce: nonce,
+		From:  from,
+		To:    to,
+		Value: value,
+		Data:  data,
+	}
+}
+
+func CreateSignedTransaction(
+	nonce uint64,
+	from common.Address,
+	to common.Address,
+	value uint64,
+	data []byte,
+	signer PublicKey,
+	signature *Signature) *Transaction {
+	return &Transaction{
+		Nonce:     nonce,
+		From:      from,
+		To:        to,
+		Value:     value,
+		Data:      data,
+		Signer:    signer,
+		Signature: signature,
+	}
+}
+
 func (tx *Transaction) GetHash() common.Hash {
 	if tx.Hash.IsZero() {
 		tx.Hash = TxHasher{}.Hash(tx)

@@ -50,7 +50,7 @@ func createNode(id string, pk *types.PrivateKey, addr string, seedNodes []string
 		SeedNodes:     seedNodes,
 		ListenAddr:    addr,
 		PrivateKey:    pk,
-		ID:            id,
+		Name:          id,
 	}
 
 	s, err := node.NewNode(opts)

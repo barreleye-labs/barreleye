@@ -8,18 +8,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNativeTransferTransaction(t *testing.T) {
-	fromPrivKey := types.GeneratePrivateKey()
-	toPrivKey := types.GeneratePrivateKey()
+func TestTransfer(t *testing.T) {
+	fromPrivateKey := types.GeneratePrivateKey()
+	toPrivateKey := types.GeneratePrivateKey()
 	tx := &types.Transaction{
-		To:    toPrivKey.PublicKey().Address(),
+		To:    toPrivateKey.PublicKey.Address(),
 		Value: 666,
 	}
 
-	assert.Nil(t, tx.Sign(fromPrivKey))
+	assert.Nil(t, tx.Sign(fromPrivateKey))
 }
 
-func TestSignTransaction(t *testing.T) {
+func TestSignTx(t *testing.T) {
 	privKey := types.GeneratePrivateKey()
 	tx := &types.Transaction{
 		Data: []byte("foo"),
@@ -29,17 +29,17 @@ func TestSignTransaction(t *testing.T) {
 	assert.NotNil(t, tx.Signature)
 }
 
-func TestVerifyTransaction(t *testing.T) {
-	privKey := types.GeneratePrivateKey()
+func TestVerifyTx(t *testing.T) {
+	signerPrivateKey := types.GeneratePrivateKey()
 	tx := &types.Transaction{
 		Data: []byte("foo"),
 	}
 
-	assert.Nil(t, tx.Sign(privKey))
+	assert.Nil(t, tx.Sign(signerPrivateKey))
 	assert.Nil(t, tx.Verify())
 
-	otherPrivKey := types.GeneratePrivateKey()
-	tx.Signer = otherPrivKey.PublicKey()
+	hackerPrivateKey := types.GeneratePrivateKey()
+	tx.Signer = hackerPrivateKey.PublicKey
 
 	assert.NotNil(t, tx.Verify())
 }
@@ -58,15 +58,15 @@ func randomTxWithSignature(t *testing.T) *types.Transaction {
 	privateKey := types.GeneratePrivateKey()
 
 	toPrivateKey := types.GeneratePrivateKey()
-	toPublicKey := toPrivateKey.PublicKey()
+	toPublicKey := toPrivateKey.PublicKey
 
 	tx := types.Transaction{
 		Nonce:  171, //ab
-		From:   privateKey.PublicKey().Address(),
+		From:   privateKey.PublicKey.Address(),
 		To:     toPublicKey.Address(),
 		Value:  171,         //ab
 		Data:   []byte{171}, //ab
-		Signer: privateKey.PublicKey(),
+		Signer: privateKey.PublicKey,
 	}
 	assert.Nil(t, tx.Sign(privateKey))
 

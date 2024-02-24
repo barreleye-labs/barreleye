@@ -28,7 +28,7 @@
 
 Download here [docker.com](https://www.docker.com/products/docker-desktop/).
 
-## **1. Install Docker.**
+## **1. Pull Docker Image.**
 ```shell
 $ docker pull kym6772/barreleye:1.0.0
 ```

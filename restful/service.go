@@ -34,19 +34,19 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 		nonce = *accountNonce
 	}
 
-	tx := types.Transaction{
-		Nonce: nonce,
-		From:  s.privateKey.PublicKey.Address(),
-		To:    common.NewAddressFromBytes(to),
-		Value: config.FaucetAmount,
-		Data:  []byte{171},
-	}
+	tx := types.CreateTransaction(
+		nonce,
+		s.privateKey.PublicKey.Address(),
+		common.NewAddressFromBytes(to),
+		config.FaucetAmount,
+		[]byte{171})
+
 	tx.Hash = tx.GetHash()
 	if err = tx.Sign(s.privateKey); err != nil {
 		return c.JSON(http.StatusInternalServerError, ResponseServerError(err.Error()))
 	}
 
-	s.txChan <- &tx
+	s.txChan <- tx
 
 	signerDTO := dto.CreateSigner(tx.Signer.Key.X.Text(16), tx.Signer.Key.Y.Text(16))
 	signatureDTO := dto.CreateSignature(tx.Signature.R.Text(16), tx.Signature.S.Text(16))
@@ -264,18 +264,18 @@ func (s *Server) postTx(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid data "+err.Error()))
 	}
 
-	tx := types.Transaction{
-		Nonce:     nonce,
-		From:      common.NewAddressFromBytes(from),
-		To:        common.NewAddressFromBytes(to),
-		Value:     value,
-		Data:      data,
-		Signer:    *signer,
-		Signature: signature,
-	}
+	tx := types.CreateSignedTransaction(
+		nonce,
+		common.NewAddressFromBytes(from),
+		common.NewAddressFromBytes(to),
+		value,
+		data,
+		*signer,
+		signature)
+
 	tx.Hash = tx.GetHash()
 
-	s.txChan <- &tx
+	s.txChan <- tx
 
 	signerDTO := dto.CreateSigner(payload.SignerX, payload.SignerY)
 	signatureDTO := dto.CreateSignature(payload.SignatureR, payload.SignatureS)

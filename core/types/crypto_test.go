@@ -14,7 +14,7 @@ import (
 
 func TestKeypairSignVerifySuccess(t *testing.T) {
 	privateKey := GeneratePrivateKey()
-	publicKey := privateKey.PublicKey()
+	publicKey := privateKey.PublicKey
 	msg := []byte("hello world")
 
 	sig, err := privateKey.Sign(msg)
