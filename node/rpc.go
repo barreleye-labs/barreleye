@@ -42,7 +42,7 @@ func NewMessage(t MessageType, data []byte) *Message {
 
 func (msg *Message) Bytes() []byte {
 	buf := &bytes.Buffer{}
-	gob.NewEncoder(buf).Encode(msg)
+	_ = gob.NewEncoder(buf).Encode(msg)
 	return buf.Bytes()
 }
 

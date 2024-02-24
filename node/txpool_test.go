@@ -34,14 +34,14 @@ func TestTxSortedMapAdd(t *testing.T) {
 
 		assert.Equal(t, m.Count(), i+1)
 		assert.True(t, m.Contains(tx.GetHash()))
-		assert.Equal(t, len(m.lookup), m.txx.Len())
+		assert.Equal(t, len(m.lookup), m.txs.Len())
 		assert.Equal(t, m.Get(tx.GetHash()), tx)
 	}
 
 	m.Clear()
 	assert.Equal(t, m.Count(), 0)
 	assert.Equal(t, len(m.lookup), 0)
-	assert.Equal(t, m.txx.Len(), 0)
+	assert.Equal(t, m.txs.Len(), 0)
 }
 
 func TestTxSortedMapRemove(t *testing.T) {
