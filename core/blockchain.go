@@ -31,11 +31,15 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey) (*Blockchain, err
 	}
 	bc.validator = NewBlockValidator(bc)
 
-	if privateKey != nil {
-		coinbase := privateKey.PublicKey
+	publicKey := privateKey.PublicKey
+	coinbase, err := bc.ReadAccountByAddress(publicKey.Address())
+	if err != nil {
+		return nil, err
+	}
 
-		coinbaseAccount := types.CreateAccount(coinbase.Address())
-		if err := bc.WriteAccountWithAddress(coinbase.Address(), coinbaseAccount); err != nil {
+	if coinbase == nil {
+		coinbase = types.CreateAccount(publicKey.Address())
+		if err := bc.WriteAccountWithAddress(publicKey.Address(), coinbase); err != nil {
 			return nil, err
 		}
 	}
@@ -47,7 +51,7 @@ func NewBlockchain(l log.Logger, privateKey *types.PrivateKey) (*Blockchain, err
 		}
 
 		if lastBlock == nil {
-			err = bc.addBlockWithoutValidation(CreateGenesisBlock(privateKey))
+			err = bc.LinkBlockWithoutValidation(CreateGenesisBlock(privateKey))
 			if err != nil {
 				return nil, err
 			}
@@ -129,7 +133,7 @@ func (bc *Blockchain) SetValidator(v Validator) {
 	bc.validator = v
 }
 
-func (bc *Blockchain) AddBlock(b *types.Block) error {
+func (bc *Blockchain) LinkBlock(b *types.Block) error {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
@@ -137,40 +141,62 @@ func (bc *Blockchain) AddBlock(b *types.Block) error {
 		return err
 	}
 
-	return bc.addBlockWithoutValidation(b)
+	return bc.LinkBlockWithoutValidation(b)
 }
 
 func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
-	account, err := bc.ReadAccountByAddress(tx.From)
+
+	fromAccount, err := bc.ReadAccountByAddress(tx.From)
 	if err != nil {
 		return err
 	}
 
-	if account == nil {
-		account = types.CreateAccount(tx.From)
-		if err = bc.WriteAccountWithAddress(account.Address, account); err != nil {
+	if fromAccount == nil {
+		fromAccount = types.CreateAccount(tx.From)
+		if err = bc.WriteAccountWithAddress(fromAccount.Address, fromAccount); err != nil {
 			return err
 		}
 	}
 
-	if account.Nonce != tx.Nonce {
+	if fromAccount.Nonce != tx.Nonce {
 		return fmt.Errorf("invalid tx nonce")
 	}
 
-	if err := bc.Transfer(tx.From, tx.To, tx.Value); err != nil {
+	toAccount, err := bc.ReadAccountByAddress(tx.To)
+	if err != nil {
 		return err
 	}
 
-	account.Nonce++
+	if toAccount == nil {
+		toAccount = types.CreateAccount(tx.To)
+		if err = bc.WriteAccountWithAddress(toAccount.Address, toAccount); err != nil {
+			return err
+		}
+	}
 
-	if err = bc.WriteAccountWithAddress(account.Address, account); err != nil {
+	if err = fromAccount.Transfer(toAccount, tx.Value); err != nil {
 		return err
 	}
+
+	fromAccount.Nonce++
+
+	if err = bc.WriteAccountWithAddress(fromAccount.Address, fromAccount); err != nil {
+		return err
+	}
+	if err = bc.WriteAccountWithAddress(toAccount.Address, toAccount); err != nil {
+		return err
+	}
+
+	_ = bc.logger.Log(
+		"msg", "transfer",
+		"from", fromAccount.Address,
+		"to", toAccount.Address,
+		"value", tx.Value)
 
 	return nil
 }
 
-func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
+func (bc *Blockchain) LinkBlockWithoutValidation(b *types.Block) error {
 	for i := 0; i < len(b.Transactions); i++ {
 		if err := bc.handleTransaction(b.Transactions[i]); err != nil {
 			_ = bc.logger.Log("error", err.Error())
@@ -229,6 +255,18 @@ func (bc *Blockchain) addBlockWithoutValidation(b *types.Block) error {
 			return err
 		}
 	}
+
+	/*	check sync account status
+		barreleyeKey, _ := types.CreatePrivateKey("a2288db63c7016b815c55c1084c2491b8599834500408ba863ec379895373ae9")
+		barreleye, _ := bc.ReadAccountByAddress(barreleyeKey.PublicKey.Address())
+		fmt.Println("barreleye: ", barreleye)
+		nayoungKey, _ := types.CreatePrivateKey("c4e0f3f39c5438d2f7ba8b830f5a5538c6a63c752cb36fb1b91911539af01421")
+		nayoung, _ := bc.ReadAccountByAddress(nayoungKey.PublicKey.Address())
+		fmt.Println("nayoung: ", nayoung)
+		youngminKey, _ := types.CreatePrivateKey("f2e1e4331b10c2b84a8ed58226398f5d11ee78052afa641d16851bd66bbdadb7")
+		youngmin, _ := bc.ReadAccountByAddress(youngminKey.PublicKey.Address())
+		fmt.Println("youngmin: ", youngmin)
+	*/
 
 	_ = bc.logger.Log(
 		"msg", "🔗 link new block",
