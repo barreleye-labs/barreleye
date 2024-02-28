@@ -15,8 +15,8 @@ func TestAddBlockToHeight(t *testing.T) {
 	bc := newBlockchainWithGenesis(t)
 	defer bc.db.Close()
 
-	assert.Nil(t, bc.AddBlock(randomBlock(t, 1, getPrevBlockHash(t, bc, int32(1)))))
-	assert.NotNil(t, bc.AddBlock(randomBlock(t, 3, common.Hash{})))
+	assert.Nil(t, bc.LinkBlock(randomBlock(t, 1, getPrevBlockHash(t, bc, int32(1)))))
+	assert.NotNil(t, bc.LinkBlock(randomBlock(t, 3, common.Hash{})))
 }
 
 func newBlockchainWithGenesis(t *testing.T) *Blockchain {
@@ -42,14 +42,14 @@ func TestAddBlock(t *testing.T) {
 	lenBlocks := 1000
 	for i := 0; i < lenBlocks; i++ {
 		block := randomBlock(t, int32(i+1), getPrevBlockHash(t, bc, int32(i+1)))
-		assert.Nil(t, bc.AddBlock(block))
+		assert.Nil(t, bc.LinkBlock(block))
 	}
 
 	lastBlockHeight, _ := bc.ReadLastBlockHeight()
 
 	assert.Equal(t, *lastBlockHeight, int32(lenBlocks))
 	assert.Equal(t, *lastBlockHeight+1, lenBlocks)
-	assert.NotNil(t, bc.AddBlock(randomBlock(t, 10, common.Hash{})))
+	assert.NotNil(t, bc.LinkBlock(randomBlock(t, 10, common.Hash{})))
 }
 
 func TestNewBlockchain(t *testing.T) {

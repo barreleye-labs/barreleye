@@ -42,7 +42,6 @@ func (barrelDB *BarrelDatabase) SelectAddressAccount(address common.Address) (*t
 	if err != nil {
 		return nil, err
 	}
-
 	return account, nil
 }
 

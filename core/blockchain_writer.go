@@ -84,50 +84,6 @@ func (bc *Blockchain) WriteAccountWithAddress(address common.Address, account *t
 	return nil
 }
 
-func (bc *Blockchain) Transfer(from, to common.Address, amount uint64) error {
-	fromAccount, err := bc.ReadAccountByAddress(from)
-	if err != nil {
-		return err
-	}
-
-	if fromAccount == nil {
-		fromAccount = types.CreateAccount(from)
-		if err = bc.WriteAccountWithAddress(from, fromAccount); err != nil {
-			return err
-		}
-	}
-
-	toAccount, err := bc.ReadAccountByAddress(to)
-	if err != nil {
-		return err
-	}
-
-	if toAccount == nil {
-		toAccount = types.CreateAccount(to)
-		if err = bc.WriteAccountWithAddress(to, toAccount); err != nil {
-			return err
-		}
-	}
-
-	if err = fromAccount.Transfer(toAccount, amount); err != nil {
-		return err
-	}
-
-	if err = bc.db.UpsertAddressAccount(fromAccount.Address, fromAccount); err != nil {
-		return err
-	}
-	if err = bc.db.UpsertAddressAccount(toAccount.Address, toAccount); err != nil {
-		return err
-	}
-
-	_ = bc.logger.Log(
-		"msg", "transfer",
-		"from", fromAccount.Address,
-		"to", toAccount.Address,
-		"value", amount)
-	return nil
-}
-
 func (bc *Blockchain) RemoveLastBlock() error {
 	if err := bc.removeLastHeader(); err != nil {
 		return err
@@ -205,18 +161,34 @@ func (bc *Blockchain) removeLastBlockTxs() error {
 	isTxLeft := true
 	for i := 0; i < len(lastBlock.Transactions); i++ {
 		edited = true
-		account, err := bc.db.SelectAddressAccount(lastBlock.Transactions[i].From)
+		fromAccount, err := bc.db.SelectAddressAccount(lastBlock.Transactions[i].From)
 		if err != nil {
 			return err
 		}
 
-		if account == nil {
+		if fromAccount == nil {
 			return fmt.Errorf("not found tx from account")
 		}
 
-		account.Nonce--
+		toAccount, err := bc.db.SelectAddressAccount(lastBlock.Transactions[i].To)
+		if err != nil {
+			return err
+		}
 
-		if err = bc.db.UpsertAddressAccount(account.Address, account); err != nil {
+		if toAccount == nil {
+			return fmt.Errorf("not found tx to account")
+		}
+
+		if err = toAccount.Transfer(fromAccount, lastBlock.Transactions[i].Value); err != nil {
+			return err
+		}
+
+		fromAccount.Nonce--
+
+		if err = bc.WriteAccountWithAddress(fromAccount.Address, fromAccount); err != nil {
+			return nil
+		}
+		if err = bc.WriteAccountWithAddress(toAccount.Address, toAccount); err != nil {
 			return nil
 		}
 

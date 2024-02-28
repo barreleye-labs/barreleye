@@ -36,8 +36,8 @@ func main() {
 		panic("failed to create private key")
 	}
 
-	node1 := createNode(nodeName, privateKey, ":"+port, peerArr, ":"+httpPort)
-	node1.Start()
+	n := createNode(nodeName, privateKey, ":"+port, peerArr, ":"+httpPort)
+	n.Start()
 
 	time.Sleep(1 * time.Second)
 

@@ -220,7 +220,7 @@ func (n *Node) handleBlock(b *types.Block) error {
 	r := rand.New(s)
 
 	n.miningTicker.Reset(n.BlockTime + time.Duration(r.Intn(7))*time.Second)
-	if err := n.chain.AddBlock(b); err != nil {
+	if err := n.chain.LinkBlock(b); err != nil {
 		//_ = n.Logger.Log("error", err.Error())
 		return err
 	}
@@ -310,7 +310,7 @@ func (n *Node) sendChainInfoRequestMessage(peer *TCPPeer) error {
 		return err
 	}
 
-	_ = n.Logger.Log("msg", "👋 requesting chain info request message", "to", peer.conn.RemoteAddr())
+	_ = n.Logger.Log("msg", "✉️ send chain info request message", "to", peer.conn.RemoteAddr())
 	return nil
 }
 
@@ -336,7 +336,7 @@ func (n *Node) handleBlockResponseMessage(from net.Addr, data *BlockResponseMess
 		return fmt.Errorf("no block in block response message")
 	}
 
-	if err := n.chain.AddBlock(data.Block); err != nil {
+	if err := n.chain.LinkBlock(data.Block); err != nil {
 		_ = n.Logger.Log("error", err.Error())
 		return err
 	}
@@ -410,13 +410,16 @@ func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
 
 	msg := NewMessage(MessageTypeStatus, buf.Bytes())
 
-	return peer.Send(msg.Bytes())
+	if err := peer.Send(msg.Bytes()); err != nil {
+		return err
+	}
+
+	_ = n.Logger.Log("msg", "✉️ send chain info response message", "to", peer.conn.RemoteAddr())
+	return nil
 }
 
 // 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
 func (n *Node) sendBlockRequestMessage(peerAddr net.Addr, blockNumber int32) error {
-	_ = n.Logger.Log("msg", "👋 requesting block height from", blockNumber)
-
 	blockRequestMessage := &BlockRequestMessage{
 		Height: blockNumber,
 	}
@@ -436,6 +439,7 @@ func (n *Node) sendBlockRequestMessage(peerAddr net.Addr, blockNumber int32) err
 		_ = n.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
 	}
 
+	_ = n.Logger.Log("msg", "✉️ send block request message", "height", blockNumber)
 	return nil
 }
 
@@ -514,7 +518,7 @@ func (n *Node) sealBlock() error {
 
 	_ = n.Logger.Log("msg", "🍀 block mining success")
 
-	if err := n.chain.AddBlock(block); err != nil {
+	if err := n.chain.LinkBlock(block); err != nil {
 		return err
 	}
 
