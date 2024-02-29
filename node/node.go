@@ -142,6 +142,8 @@ free:
 
 			go peer.readLoop(n.rpcCh)
 
+			time.Sleep(1 * time.Second)
+
 			if err := n.sendChainInfoRequestMessage(peer); err != nil {
 				_ = n.Logger.Log("err", err)
 				continue
