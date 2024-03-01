@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"math/rand"
 	"net"
@@ -49,6 +50,7 @@ type Node struct {
 	miningTicker *time.Ticker
 
 	peersBlockHeightUntilSync int32
+	freezed                   bool
 }
 
 func NewNode(opts NodeOpts) (*Node, error) {
@@ -84,7 +86,7 @@ func NewNode(opts NodeOpts) (*Node, error) {
 	peerCh := make(chan *TCPPeer)
 	tr := NewTCPTransport(opts.ListenAddr, peerCh)
 
-	s := &Node{
+	n := &Node{
 		TCPTransport: tr,
 		peerCh:       peerCh,
 		peerMap:      make(map[net.Addr]*TCPPeer),
@@ -96,15 +98,16 @@ func NewNode(opts NodeOpts) (*Node, error) {
 		quitCh:       make(chan struct{}, 1),
 		txChan:       txChan,
 		miningTicker: time.NewTicker(opts.BlockTime),
+		freezed:      false,
 	}
 
-	s.TCPTransport.peerCh = peerCh
+	n.TCPTransport.peerCh = peerCh
 
-	if s.RPCProcessor == nil {
-		s.RPCProcessor = s
+	if n.RPCProcessor == nil {
+		n.RPCProcessor = n
 	}
 
-	return s, nil
+	return n, nil
 }
 
 func (n *Node) bootstrapNetwork() {
@@ -164,8 +167,12 @@ free:
 			}
 
 			if err = n.RPCProcessor.HandleMessage(msg); err != nil {
-				if !errors.Is(err, core.ErrBlockKnown) && !errors.Is(err, core.ErrTransactionAlreadyPending) {
+				if !errors.Is(err, common.ErrBlockKnown) && !errors.Is(err, common.ErrTransactionAlreadyPending) {
 					_ = n.Logger.Log("error", err)
+				}
+
+				if errors.Is(err, common.ErrBlockTooHigh) {
+					n.freezed = true
 				}
 			}
 
@@ -191,6 +198,10 @@ func (n *Node) mine() error {
 		//}
 
 		<-n.miningTicker.C
+
+		if n.freezed {
+			continue
+		}
 
 		if err := n.sealBlock(); err != nil {
 			_ = n.Logger.Log("sealing block error", err)

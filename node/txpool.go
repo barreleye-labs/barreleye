@@ -22,7 +22,7 @@ func NewTxPool(maxLength int) *TxPool {
 
 func (p *TxPool) Add(tx *types.Transaction, chain *core.Blockchain) error {
 	if p.pending.Contains(tx.GetHash()) {
-		return core.ErrTransactionAlreadyPending
+		return common.ErrTransactionAlreadyPending
 	}
 
 	txs := p.Pending()

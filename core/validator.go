@@ -2,13 +2,10 @@ package core
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 )
-
-var ErrBlockKnown = errors.New("block already known")
-var ErrTransactionAlreadyPending = errors.New("this transaction is already pending transaction")
 
 type Validator interface {
 	ValidateBlock(*types.Block) error
@@ -39,7 +36,7 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 	}
 
 	if lastBlock.Height > b.Height {
-		return ErrBlockKnown
+		return common.ErrBlockKnown
 	}
 
 	if err = b.Verify(); err != nil {
@@ -55,11 +52,11 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 			}
 			return nil
 		}
-		return ErrBlockKnown
+		return common.ErrBlockKnown
 	}
 
 	if lastBlock.Height+1 != b.Height {
-		return fmt.Errorf("block (%s) with height (%d) is too high => current height (%d)", b.GetHash(), b.Height, lastBlock.Height)
+		return common.ErrBlockTooHigh
 	}
 
 	prevHeader, err := v.bc.ReadHeaderByHeight(b.Height - 1)
