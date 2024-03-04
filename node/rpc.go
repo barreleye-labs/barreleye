@@ -15,12 +15,14 @@ import (
 type MessageType byte
 
 const (
-	MessageTypeTx            MessageType = 0x1
-	MessageTypeBlock         MessageType = 0x2
-	MessageTypeBlockRequest  MessageType = 0x3
-	MessageTypeStatus        MessageType = 0x4
-	MessageTypeGetStatus     MessageType = 0x5
-	MessageTypeBlockResponse MessageType = 0x6
+	MessageTypeTx                MessageType = 0x1
+	MessageTypeBlock             MessageType = 0x2
+	MessageTypeChainInfoResponse MessageType = 0x3
+	MessageTypeChainInfoRequest  MessageType = 0x4
+	MessageTypeBlockRequest      MessageType = 0x5
+	MessageTypeBlockResponse     MessageType = 0x6
+	MessageTypeBlockHashRequest  MessageType = 0x7
+	MessageTypeBlockHashResponse MessageType = 0x8
 )
 
 type RPC struct {
@@ -87,45 +89,66 @@ func DecodeRPCDefaultFunc(rpc RPC) (*DecodedMessage, error) {
 			Data: block,
 		}, nil
 
-	case MessageTypeGetStatus:
+	case MessageTypeChainInfoRequest:
 		return &DecodedMessage{
 			From: rpc.From,
 			Data: &ChainInfoRequestMessage{},
 		}, nil
 
-	case MessageTypeStatus:
-		statusMessage := new(ChainInfoResponseMessage)
-		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(statusMessage); err != nil {
+	case MessageTypeChainInfoResponse:
+		chainInfoResponseMessage := new(ChainInfoResponseMessage)
+		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(chainInfoResponseMessage); err != nil {
 			return nil, err
 		}
 
 		return &DecodedMessage{
 			From: rpc.From,
-			Data: statusMessage,
+			Data: chainInfoResponseMessage,
 		}, nil
 
 	case MessageTypeBlockRequest:
-		getBlocks := new(BlockRequestMessage)
-		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(getBlocks); err != nil {
+		blockRequestMessage := new(BlockRequestMessage)
+		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(blockRequestMessage); err != nil {
 			return nil, err
 		}
 
 		return &DecodedMessage{
 			From: rpc.From,
-			Data: getBlocks,
+			Data: blockRequestMessage,
 		}, nil
 
 	case MessageTypeBlockResponse:
-		blocks := new(BlockResponseMessage)
-		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(blocks); err != nil {
+		blockResponseMessage := new(BlockResponseMessage)
+		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(blockResponseMessage); err != nil {
 			return nil, err
 		}
 
 		return &DecodedMessage{
 			From: rpc.From,
-			Data: blocks,
+			Data: blockResponseMessage,
 		}, nil
 
+	case MessageTypeBlockHashRequest:
+		blockHashRequestMessage := new(BlockHashRequestMessage)
+		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(blockHashRequestMessage); err != nil {
+			return nil, err
+		}
+
+		return &DecodedMessage{
+			From: rpc.From,
+			Data: blockHashRequestMessage,
+		}, nil
+
+	case MessageTypeBlockHashResponse:
+		blockHashResponseMessage := new(BlockHashResponseMessage)
+		if err := gob.NewDecoder(bytes.NewReader(msg.Data)).Decode(blockHashResponseMessage); err != nil {
+			return nil, err
+		}
+
+		return &DecodedMessage{
+			From: rpc.From,
+			Data: blockHashResponseMessage,
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid message header %x", msg.Header)
 	}

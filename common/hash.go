@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 )
@@ -26,6 +27,14 @@ func (h Hash) ToSlice() []byte {
 		b[i] = h[i]
 	}
 	return b
+}
+
+func (h Hash) Equal(hash Hash) bool {
+	return bytes.Equal(h.ToSlice(), hash.ToSlice())
+}
+
+func (h Hash) Compare(hash Hash) int {
+	return bytes.Compare(h.ToSlice(), hash.ToSlice())
 }
 
 func (h Hash) String() string {

@@ -50,7 +50,7 @@ type Node struct {
 	miningTicker *time.Ticker
 
 	peersBlockHeightUntilSync int32
-	freezed                   bool
+	miningStopped             bool
 }
 
 func NewNode(opts NodeOpts) (*Node, error) {
@@ -87,18 +87,18 @@ func NewNode(opts NodeOpts) (*Node, error) {
 	tr := NewTCPTransport(opts.ListenAddr, peerCh)
 
 	n := &Node{
-		TCPTransport: tr,
-		peerCh:       peerCh,
-		peerMap:      make(map[net.Addr]*TCPPeer),
-		NodeOpts:     opts,
-		chain:        chain,
-		txPool:       NewTxPool(1000),
-		isValidator:  opts.PrivateKey != nil,
-		rpcCh:        make(chan RPC),
-		quitCh:       make(chan struct{}, 1),
-		txChan:       txChan,
-		miningTicker: time.NewTicker(opts.BlockTime),
-		freezed:      false,
+		TCPTransport:  tr,
+		peerCh:        peerCh,
+		peerMap:       make(map[net.Addr]*TCPPeer),
+		NodeOpts:      opts,
+		chain:         chain,
+		txPool:        NewTxPool(1000),
+		isValidator:   opts.PrivateKey != nil,
+		rpcCh:         make(chan RPC),
+		quitCh:        make(chan struct{}, 1),
+		txChan:        txChan,
+		miningTicker:  time.NewTicker(opts.BlockTime),
+		miningStopped: true,
 	}
 
 	n.TCPTransport.peerCh = peerCh
@@ -145,7 +145,7 @@ free:
 
 			go peer.readLoop(n.rpcCh)
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(5 * time.Second)
 
 			if err := n.sendChainInfoRequestMessage(peer); err != nil {
 				_ = n.Logger.Log("err", err)
@@ -171,8 +171,20 @@ free:
 					_ = n.Logger.Log("error", err)
 				}
 
-				if errors.Is(err, common.ErrBlockTooHigh) {
-					n.freezed = true
+				if errors.Is(err, common.ErrBlockTooHigh) || errors.Is(err, common.ErrPrevBlockMismatch) {
+					n.miningStopped = true
+					lastBlockHeight, err := n.chain.ReadLastBlockHeight()
+					if err != nil {
+						_ = n.Logger.Log("error", err)
+					}
+
+					if lastBlockHeight == nil {
+						_ = n.Logger.Log("error", "lastBlockHeight is nil")
+					}
+
+					if err = n.sendBlockHashRequestMessage(msg.From, *lastBlockHeight); err != nil {
+						_ = n.Logger.Log("error", err)
+					}
 				}
 			}
 
@@ -199,14 +211,15 @@ func (n *Node) mine() error {
 
 		<-n.miningTicker.C
 
-		if n.freezed {
-			continue
+		if n.miningStopped {
+			break
 		}
 
 		if err := n.sealBlock(); err != nil {
 			_ = n.Logger.Log("sealing block error", err)
 		}
 	}
+	return nil
 }
 
 func (n *Node) HandleMessage(msg *DecodedMessage) error {
@@ -214,6 +227,9 @@ func (n *Node) HandleMessage(msg *DecodedMessage) error {
 	case *types.Transaction:
 		return n.handleTransaction(t)
 	case *types.Block:
+		if n.miningStopped {
+			return nil
+		}
 		return n.handleBlock(t)
 	case *ChainInfoRequestMessage:
 		return n.handleChainInfoRequestMessage(msg.From)
@@ -223,6 +239,10 @@ func (n *Node) HandleMessage(msg *DecodedMessage) error {
 		return n.handleBlockRequestMessage(msg.From, t)
 	case *BlockResponseMessage:
 		return n.handleBlockResponseMessage(msg.From, t)
+	case *BlockHashRequestMessage:
+		return n.handleBlockHashRequestMessage(msg.From, t)
+	case *BlockHashResponseMessage:
+		return n.handleBlockHashResponseMessage(msg.From, t)
 	}
 
 	return nil
@@ -265,8 +285,32 @@ func (n *Node) handleTransaction(tx *types.Transaction) error {
 	return nil
 }
 
-func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessage) error {
-	_ = n.Logger.Log("msg", "📬 received blockRequest message", "from", from)
+func (n *Node) sendBlockHashRequestMessage(peerAddr net.Addr, height int32) error {
+	blockHashRequestMessage := &BlockHashRequestMessage{
+		Height: height,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(blockHashRequestMessage); err != nil {
+		return err
+	}
+
+	msg := NewMessage(MessageTypeBlockHashRequest, buf.Bytes())
+	peer, ok := n.peerMap[peerAddr]
+	if !ok {
+		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+	}
+
+	if err := peer.Send(msg.Bytes()); err != nil {
+		_ = n.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
+	}
+
+	_ = n.Logger.Log("msg", "✉️ send block hash request message", "height", height)
+	return nil
+}
+
+func (n *Node) handleBlockHashRequestMessage(from net.Addr, data *BlockHashRequestMessage) error {
+	_ = n.Logger.Log("msg", "📬 received block hash request message", "from", from)
 
 	height, err := n.chain.ReadLastBlockHeight()
 	if err != nil {
@@ -274,7 +318,117 @@ func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessag
 	}
 
 	if *height < data.Height {
-		return fmt.Errorf("requested block number %d is higher compared to block number %d in this chain", data.Height, height)
+		return fmt.Errorf("requested block height %d is higher compared to block height %d in this chain", data.Height, height)
+	}
+
+	block, err := n.chain.ReadBlockByHeight(data.Height)
+	if err != nil {
+		return err
+	}
+
+	if block == nil {
+		return fmt.Errorf("not found block")
+	}
+
+	blockHashResponseMsg := &BlockHashResponseMessage{
+		Hash:          block.Hash,
+		CurrentHeight: *height,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(blockHashResponseMsg); err != nil {
+		return err
+	}
+
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
+	msg := NewMessage(MessageTypeBlockHashResponse, buf.Bytes())
+	peer, ok := n.peerMap[from]
+	if !ok {
+		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+	}
+
+	return peer.Send(msg.Bytes())
+}
+
+func (n *Node) handleBlockHashResponseMessage(from net.Addr, data *BlockHashResponseMessage) error {
+	_ = n.Logger.Log("msg", "📦 received the requested block hash", "hash:", data.Hash, "from", from)
+
+	if data == nil {
+		return fmt.Errorf("data cannot be nil")
+	}
+
+	lastBlock, err := n.chain.ReadLastBlock()
+	if err != nil {
+		return err
+	}
+
+	if data.Hash.Equal(lastBlock.Hash) {
+		if data.CurrentHeight > lastBlock.Height {
+			n.peersBlockHeightUntilSync = data.CurrentHeight
+			if err = n.sendBlockRequestMessage(from, lastBlock.Height+1); err != nil {
+				return err
+			}
+		}
+		n.miningStopped = false
+		go n.mine()
+
+		return nil
+	}
+
+	if err = n.chain.RemoveLastBlock(); err != nil {
+		return err
+	}
+
+	if lastBlock.Height < 1 {
+		if err = n.sendBlockRequestMessage(from, lastBlock.Height+1); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err = n.sendBlockHashRequestMessage(from, lastBlock.Height-1); err != nil {
+		return err
+	}
+	return nil
+}
+
+// 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
+func (n *Node) sendBlockRequestMessage(peerAddr net.Addr, blockHeight int32) error {
+	blockRequestMessage := &BlockRequestMessage{
+		Height: blockHeight,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(blockRequestMessage); err != nil {
+		return err
+	}
+
+	msg := NewMessage(MessageTypeBlockRequest, buf.Bytes())
+	peer, ok := n.peerMap[peerAddr]
+	if !ok {
+		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+	}
+
+	if err := peer.Send(msg.Bytes()); err != nil {
+		_ = n.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
+	}
+
+	_ = n.Logger.Log("msg", "✉️ send block request message", "height", blockHeight)
+	return nil
+}
+
+func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessage) error {
+	_ = n.Logger.Log("msg", "📬 received block request message", "from", from)
+
+	height, err := n.chain.ReadLastBlockHeight()
+	if err != nil {
+		return err
+	}
+
+	if *height < data.Height {
+		return fmt.Errorf("requested block height %d is higher compared to block height %d in this chain", data.Height, height)
 	}
 
 	block, err := n.chain.ReadBlockByHeight(data.Height)
@@ -307,41 +461,6 @@ func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessag
 	return peer.Send(msg.Bytes())
 }
 
-func (n *Node) sendChainInfoRequestMessage(peer *TCPPeer) error {
-	var (
-		getStatusMsg = new(ChainInfoRequestMessage)
-		buf          = new(bytes.Buffer)
-	)
-
-	if err := gob.NewEncoder(buf).Encode(getStatusMsg); err != nil {
-		return err
-	}
-
-	msg := NewMessage(MessageTypeGetStatus, buf.Bytes())
-
-	if err := peer.Send(msg.Bytes()); err != nil {
-		return err
-	}
-
-	_ = n.Logger.Log("msg", "✉️ send chain info request message", "to", peer.conn.RemoteAddr())
-	return nil
-}
-
-func (n *Node) broadcast(payload []byte) error {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-	for netAddr, peer := range n.peerMap {
-		if err := peer.Send(payload); err != nil {
-			if err = peer.Close(); err != nil {
-				return err
-			}
-			delete(n.peerMap, netAddr)
-			fmt.Printf("communication with peer has been lost and no further transmissions will be made..\nwrite error: ", err)
-		}
-	}
-	return nil
-}
-
 func (n *Node) handleBlockResponseMessage(from net.Addr, data *BlockResponseMessage) error {
 	_ = n.Logger.Log("msg", "📦 received the requested block", "height:", data.Block.Height, "from", from)
 
@@ -368,38 +487,24 @@ func (n *Node) handleBlockResponseMessage(from net.Addr, data *BlockResponseMess
 	return nil
 }
 
-func (n *Node) handleChainInfoResponseMessage(from net.Addr, data *ChainInfoResponseMessage) error {
-	_ = n.Logger.Log("msg", "📬 received chain info response message", "from", from, "height", data.CurrentHeight)
+func (n *Node) sendChainInfoRequestMessage(peer *TCPPeer) error {
+	var (
+		getStatusMsg = new(ChainInfoRequestMessage)
+		buf          = new(bytes.Buffer)
+	)
 
-	height, err := n.chain.ReadLastBlockHeight()
-	if err != nil {
+	if err := gob.NewEncoder(buf).Encode(getStatusMsg); err != nil {
 		return err
 	}
 
-	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
-	if data.CurrentHeight <= *height {
-		n.Logger.Log("msg", "already sync", "this node height", height, "network height", data.CurrentHeight, "addr", from)
-		go n.mine()
-		return nil
-	}
+	msg := NewMessage(MessageTypeChainInfoRequest, buf.Bytes())
 
-	n.peersBlockHeightUntilSync = data.CurrentHeight
-
-	if err = n.sendBlockRequestMessage(from, *height+1); err != nil {
+	if err := peer.Send(msg.Bytes()); err != nil {
 		return err
 	}
 
+	_ = n.Logger.Log("msg", "✉️ send chain info request message", "to", peer.conn.RemoteAddr())
 	return nil
-}
-
-func (n *Node) handleChainInfoRequestMessage(from net.Addr) error {
-	_ = n.Logger.Log("msg", "📬 received chain info request message", "from", from)
-
-	height, err := n.chain.ReadLastBlockHeight()
-	if err != nil {
-		return err
-	}
-	return n.sendChainInfoResponseMessage(from, *height)
 }
 
 func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
@@ -421,7 +526,7 @@ func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
 		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
 	}
 
-	msg := NewMessage(MessageTypeStatus, buf.Bytes())
+	msg := NewMessage(MessageTypeChainInfoResponse, buf.Bytes())
 
 	if err := peer.Send(msg.Bytes()); err != nil {
 		return err
@@ -431,28 +536,52 @@ func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
 	return nil
 }
 
-// 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
-func (n *Node) sendBlockRequestMessage(peerAddr net.Addr, blockNumber int32) error {
-	blockRequestMessage := &BlockRequestMessage{
-		Height: blockNumber,
-	}
+func (n *Node) handleChainInfoRequestMessage(from net.Addr) error {
+	_ = n.Logger.Log("msg", "📬 received chain info request message", "from", from)
 
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(blockRequestMessage); err != nil {
+	height, err := n.chain.ReadLastBlockHeight()
+	if err != nil {
+		return err
+	}
+	return n.sendChainInfoResponseMessage(from, *height)
+}
+
+func (n *Node) handleChainInfoResponseMessage(from net.Addr, data *ChainInfoResponseMessage) error {
+	_ = n.Logger.Log("msg", "📬 received chain info response message", "from", from, "height", data.CurrentHeight)
+
+	height, err := n.chain.ReadLastBlockHeight()
+	if err != nil {
 		return err
 	}
 
-	msg := NewMessage(MessageTypeBlockRequest, buf.Bytes())
-	peer, ok := n.peerMap[peerAddr]
-	if !ok {
-		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
+	// 전달 받은 블록 높이보다 현재 나의 블록체인의 블록 높이가 같거나 클 경우.
+	if data.CurrentHeight <= *height {
+		_ = n.Logger.Log("msg", "already sync", "this node height", height, "network height", data.CurrentHeight, "addr", from)
+		n.miningStopped = false
+		go n.mine()
+		return nil
 	}
 
-	if err := peer.Send(msg.Bytes()); err != nil {
-		_ = n.Logger.Log("error", "failed to send to peer", "err", err, "peer", peer)
+	n.peersBlockHeightUntilSync = data.CurrentHeight
+	if err = n.sendBlockRequestMessage(from, *height+1); err != nil {
+		return err
 	}
 
-	_ = n.Logger.Log("msg", "✉️ send block request message", "height", blockNumber)
+	return nil
+}
+
+func (n *Node) broadcast(payload []byte) error {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	for netAddr, peer := range n.peerMap {
+		if err := peer.Send(payload); err != nil {
+			if err = peer.Close(); err != nil {
+				return err
+			}
+			delete(n.peerMap, netAddr)
+			fmt.Printf("communication with peer has been lost and no further transmissions will be made..\nwrite error: ", err)
+		}
+	}
 	return nil
 }
 
@@ -525,13 +654,13 @@ func (n *Node) sealBlock() error {
 		return err
 	}
 
-	if err := block.Sign(*n.PrivateKey); err != nil {
+	if err = block.Sign(*n.PrivateKey); err != nil {
 		return err
 	}
 
 	_ = n.Logger.Log("msg", "🍀 block mining success")
 
-	if err := n.chain.LinkBlock(block); err != nil {
+	if err = n.chain.LinkBlock(block); err != nil {
 		return err
 	}
 
