@@ -21,7 +21,7 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 
 	to, err := hex.DecodeString(payload.AccountAddress)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, "invalid AccountAddress "+err.Error())
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid AccountAddress "+err.Error()))
 	}
 
 	accountNonce, err := s.bc.ReadAccountNonceByAddress(s.privateKey.PublicKey.Address())
