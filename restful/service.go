@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func (s *Server) requestSomeCoin(c echo.Context) error {
@@ -235,29 +236,36 @@ func (s *Server) postTx(c echo.Context) error {
 	signer := types.GetPublicKey(payload.SignerX, payload.SignerY)
 	signature := types.GetSignature(payload.SignatureR, payload.SignatureS)
 
-	from, err := hex.DecodeString(payload.From)
+	rm0x := strings.Replace(payload.From, "0x", "", 1)
+	rm0X := strings.Replace(rm0x, "0X", "", 1)
+	from, err := hex.DecodeString(rm0X)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid from "+err.Error()))
 	}
 
-	to, err := hex.DecodeString(payload.To)
+	rm0x = strings.Replace(payload.To, "0x", "", 1)
+	rm0X = strings.Replace(rm0x, "0X", "", 1)
+	to, err := hex.DecodeString(rm0X)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid to "+err.Error()))
 	}
 
-	accountNonce, err := s.bc.ReadAccountNonceByAddress(common.NewAddressFromBytes(from))
+	account, err := s.bc.ReadAccountByAddress(common.NewAddressFromBytes(from))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ResponseServerError(err.Error()))
 	}
 
 	nonce := uint64(0)
-	if accountNonce != nil {
-		nonce = *accountNonce
+	if account != nil {
+		nonce = account.Nonce
 	}
 
 	valueBigInt := new(big.Int)
 	valueBigInt.SetString(payload.Value, 16)
 	value := valueBigInt.Uint64()
+	if value > account.Balance {
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("insufficient balance"))
+	}
 
 	data, err := hex.DecodeString(payload.Data)
 	if err != nil {
