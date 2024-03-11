@@ -51,6 +51,8 @@ type Node struct {
 
 	peersBlockHeightUntilSync int32
 	miningStopped             bool
+	miningRestartTime         int64
+	isCheckingTimeout         bool
 }
 
 func NewNode(opts NodeOpts) (*Node, error) {
@@ -87,18 +89,20 @@ func NewNode(opts NodeOpts) (*Node, error) {
 	tr := NewTCPTransport(opts.ListenAddr, peerCh)
 
 	n := &Node{
-		TCPTransport:  tr,
-		peerCh:        peerCh,
-		peerMap:       make(map[net.Addr]*TCPPeer),
-		NodeOpts:      opts,
-		chain:         chain,
-		txPool:        NewTxPool(1000),
-		isValidator:   opts.PrivateKey != nil,
-		rpcCh:         make(chan RPC),
-		quitCh:        make(chan struct{}, 1),
-		txChan:        txChan,
-		miningTicker:  time.NewTicker(opts.BlockTime),
-		miningStopped: true,
+		TCPTransport:      tr,
+		peerCh:            peerCh,
+		peerMap:           make(map[net.Addr]*TCPPeer),
+		NodeOpts:          opts,
+		chain:             chain,
+		txPool:            NewTxPool(1000),
+		isValidator:       opts.PrivateKey != nil,
+		rpcCh:             make(chan RPC),
+		quitCh:            make(chan struct{}, 1),
+		txChan:            txChan,
+		miningTicker:      time.NewTicker(opts.BlockTime),
+		miningStopped:     true,
+		miningRestartTime: 0,
+		isCheckingTimeout: false,
 	}
 
 	n.TCPTransport.peerCh = peerCh
@@ -108,6 +112,15 @@ func NewNode(opts NodeOpts) (*Node, error) {
 	}
 
 	return n, nil
+}
+
+func (n *Node) checkBlockSyncTimeout() {
+	n.isCheckingTimeout = true
+	for n.miningRestartTime > time.Now().UnixNano() {
+		time.Sleep(10 * time.Second)
+	}
+	n.miningStopped = false
+	n.isCheckingTimeout = false
 }
 
 func (n *Node) bootstrapNetwork() {
@@ -147,7 +160,7 @@ free:
 
 			time.Sleep(5 * time.Second)
 
-			if err := n.sendChainInfoRequestMessage(peer); err != nil {
+			if err := n.sendChainInfoRequestMessage(peer.conn.RemoteAddr()); err != nil {
 				_ = n.Logger.Log("err", err)
 				continue
 			}
@@ -196,7 +209,7 @@ free:
 	_ = n.Logger.Log("msg", "Node is shutting down")
 }
 
-func (n *Node) mine() error {
+func (n *Node) mine() {
 	_ = n.Logger.Log("msg", "start mining using POR(proof of random)", "blockTime", n.BlockTime)
 
 	for {
@@ -212,14 +225,13 @@ func (n *Node) mine() error {
 		<-n.miningTicker.C
 
 		if n.miningStopped {
-			break
+			continue
 		}
 
 		if err := n.sealBlock(); err != nil {
 			_ = n.Logger.Log("sealing block error", err)
 		}
 	}
-	return nil
 }
 
 func (n *Node) HandleMessage(msg *DecodedMessage) error {
@@ -372,7 +384,6 @@ func (n *Node) handleBlockHashResponseMessage(from net.Addr, data *BlockHashResp
 			}
 		}
 		n.miningStopped = false
-		go n.mine()
 
 		return nil
 	}
@@ -394,7 +405,6 @@ func (n *Node) handleBlockHashResponseMessage(from net.Addr, data *BlockHashResp
 	return nil
 }
 
-// 네트워크에서 가장 높은 블록 높이에 있을 때 계속 동기화되지 않도록 하는 방법을 찾아야 함.
 func (n *Node) sendBlockRequestMessage(peerAddr net.Addr, blockHeight int32) error {
 	blockRequestMessage := &BlockRequestMessage{
 		Height: blockHeight,
@@ -420,7 +430,10 @@ func (n *Node) sendBlockRequestMessage(peerAddr net.Addr, blockHeight int32) err
 }
 
 func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessage) error {
-	_ = n.Logger.Log("msg", "📬 received block request message", "from", from)
+	_ = n.Logger.Log("msg", "📬 received block request message", "from", from, "height", data.Height)
+
+	n.miningStopped = true
+	n.miningRestartTime = time.Now().UnixNano() + (1 * time.Second).Nanoseconds()
 
 	height, err := n.chain.ReadLastBlockHeight()
 	if err != nil {
@@ -440,6 +453,21 @@ func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessag
 		return fmt.Errorf("not found block")
 	}
 
+	if err = n.sendBlockResponseMessage(from, block); err != nil {
+		return err
+	}
+
+	if !n.isCheckingTimeout {
+		go n.checkBlockSyncTimeout()
+	}
+	return nil
+}
+
+func (n *Node) sendBlockResponseMessage(from net.Addr, block *types.Block) error {
+	if block == nil {
+		return fmt.Errorf("block is nil")
+	}
+
 	blockResponseMsg := &BlockResponseMessage{
 		Block: block,
 	}
@@ -449,16 +477,19 @@ func (n *Node) handleBlockRequestMessage(from net.Addr, data *BlockRequestMessag
 		return err
 	}
 
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-
 	msg := NewMessage(MessageTypeBlockResponse, buf.Bytes())
+
 	peer, ok := n.peerMap[from]
 	if !ok {
 		return fmt.Errorf("peer %s not known", peer.conn.RemoteAddr())
 	}
 
-	return peer.Send(msg.Bytes())
+	if err := peer.Send(msg.Bytes()); err != nil {
+		return err
+	}
+
+	_ = n.Logger.Log("msg", "✉️ send block response message", "height", block.Height)
+	return nil
 }
 
 func (n *Node) handleBlockResponseMessage(from net.Addr, data *BlockResponseMessage) error {
@@ -478,8 +509,7 @@ func (n *Node) handleBlockResponseMessage(from net.Addr, data *BlockResponseMess
 			return err
 		}
 	} else if n.peersBlockHeightUntilSync == data.Block.Height {
-		peer := n.peerMap[from]
-		if err := n.sendChainInfoRequestMessage(peer); err != nil {
+		if err := n.sendChainInfoRequestMessage(from); err != nil {
 			return err
 		}
 	}
@@ -487,7 +517,7 @@ func (n *Node) handleBlockResponseMessage(from net.Addr, data *BlockResponseMess
 	return nil
 }
 
-func (n *Node) sendChainInfoRequestMessage(peer *TCPPeer) error {
+func (n *Node) sendChainInfoRequestMessage(from net.Addr) error {
 	var (
 		getStatusMsg = new(ChainInfoRequestMessage)
 		buf          = new(bytes.Buffer)
@@ -499,6 +529,7 @@ func (n *Node) sendChainInfoRequestMessage(peer *TCPPeer) error {
 
 	msg := NewMessage(MessageTypeChainInfoRequest, buf.Bytes())
 
+	peer := n.peerMap[from]
 	if err := peer.Send(msg.Bytes()); err != nil {
 		return err
 	}
@@ -579,7 +610,7 @@ func (n *Node) broadcast(payload []byte) error {
 				return err
 			}
 			delete(n.peerMap, netAddr)
-			fmt.Printf("communication with peer has been lost and no further transmissions will be made..\nwrite error: ", err)
+			fmt.Printf("communication with peer has been lost and no further transmissions will be made..\nwrite error: %s", err)
 		}
 	}
 	return nil
