@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 func (s *Server) requestSomeCoin(c echo.Context) error {
@@ -20,7 +19,7 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid payload "+err.Error()))
 	}
 
-	to, err := hex.DecodeString(payload.AccountAddress)
+	to, err := hex.DecodeString(util.Rm0x(payload.AccountAddress))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid AccountAddress "+err.Error()))
 	}
@@ -72,7 +71,7 @@ func (s *Server) getAccount(c echo.Context) error {
 
 	var result *types.Account = nil
 
-	bytes, err := hex.DecodeString(address)
+	bytes, err := hex.DecodeString(util.Rm0x(address))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid address"))
 	}
@@ -233,19 +232,22 @@ func (s *Server) postTx(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid payload "+err.Error()))
 	}
 
-	signer := types.GetPublicKey(payload.SignerX, payload.SignerY)
-	signature := types.GetSignature(payload.SignatureR, payload.SignatureS)
+	signer, err := types.GetPublicKey(payload.SignerX, payload.SignerY)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid signer "+err.Error()))
+	}
 
-	rm0x := strings.Replace(payload.From, "0x", "", 1)
-	rm0X := strings.Replace(rm0x, "0X", "", 1)
-	from, err := hex.DecodeString(rm0X)
+	signature, err := types.GetSignature(payload.SignatureR, payload.SignatureS)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid signature "+err.Error()))
+	}
+
+	from, err := hex.DecodeString(util.Rm0x(payload.From))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid from "+err.Error()))
 	}
 
-	rm0x = strings.Replace(payload.To, "0x", "", 1)
-	rm0X = strings.Replace(rm0x, "0X", "", 1)
-	to, err := hex.DecodeString(rm0X)
+	to, err := hex.DecodeString(util.Rm0x(payload.To))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid to "+err.Error()))
 	}
@@ -260,14 +262,23 @@ func (s *Server) postTx(c echo.Context) error {
 		nonce = account.Nonce
 	}
 
+	base := 10
+	if util.IsHex(payload.Value) {
+		base = 16
+	}
+
 	valueBigInt := new(big.Int)
-	valueBigInt.SetString(payload.Value, 16)
+	valueBigInt, ok := valueBigInt.SetString(payload.Value, base)
+	if !ok {
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid value "))
+	}
+
 	value := valueBigInt.Uint64()
 	if value > account.Balance {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("insufficient balance"))
 	}
 
-	data, err := hex.DecodeString(payload.Data)
+	data, err := hex.DecodeString(util.Rm0x(payload.Data))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid data "+err.Error()))
 	}
