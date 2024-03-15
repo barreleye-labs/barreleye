@@ -1,6 +1,7 @@
 package restful
 
 import (
+	"bytes"
 	"encoding/hex"
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/common/util"
@@ -257,6 +258,10 @@ func (s *Server) postTx(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ResponseServerError(err.Error()))
 	}
 
+	if bytes.Equal(from, to) {
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("from and to must be different"))
+	}
+
 	nonce := uint64(0)
 	if account != nil {
 		nonce = account.Nonce
@@ -268,9 +273,9 @@ func (s *Server) postTx(c echo.Context) error {
 	}
 
 	valueBigInt := new(big.Int)
-	valueBigInt, ok := valueBigInt.SetString(payload.Value, base)
+	valueBigInt, ok := valueBigInt.SetString(util.Rm0x(payload.Value), base)
 	if !ok {
-		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid value "))
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid value"))
 	}
 
 	value := valueBigInt.Uint64()
