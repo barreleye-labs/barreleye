@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/common/util"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"io"
@@ -87,11 +89,18 @@ func (k *PublicKey) Address() common.Address {
 	return common.NewAddressFromBytes(h[:20])
 }
 
-func GetPublicKey(xHex string, yHex string) *PublicKey {
+func GetPublicKey(xHex string, yHex string) (*PublicKey, error) {
 	x := new(big.Int)
-	x.SetString(xHex, 16)
+	x, ok := x.SetString(util.Rm0x(xHex), 16)
+	if !ok {
+		return nil, fmt.Errorf("invalid signerX")
+	}
+
 	y := new(big.Int)
-	y.SetString(yHex, 16)
+	y, ok = y.SetString(util.Rm0x(yHex), 16)
+	if !ok {
+		return nil, fmt.Errorf("invalid signerY")
+	}
 
 	ecdsaPublicKey := ecdsa.PublicKey{
 		Curve: secp256k1.S256(),
@@ -101,7 +110,7 @@ func GetPublicKey(xHex string, yHex string) *PublicKey {
 
 	return &PublicKey{
 		Key: &ecdsaPublicKey,
-	}
+	}, nil
 }
 
 type Signature struct {
@@ -118,14 +127,21 @@ func (sig *Signature) Verify(publicKey PublicKey, data []byte) bool {
 	return ecdsa.Verify(publicKey.Key, data, sig.R, sig.S)
 }
 
-func GetSignature(rHex string, sHex string) *Signature {
+func GetSignature(rHex string, sHex string) (*Signature, error) {
 	r := new(big.Int)
-	r.SetString(rHex, 16)
+	r, ok := r.SetString(util.Rm0x(rHex), 16)
+	if !ok {
+		return nil, fmt.Errorf("invalid signatureR")
+	}
+
 	s := new(big.Int)
-	s.SetString(sHex, 16)
+	s, ok = s.SetString(sHex, 16)
+	if !ok {
+		return nil, fmt.Errorf("invalid signatureS")
+	}
 
 	return &Signature{
 		R: r,
 		S: s,
-	}
+	}, nil
 }

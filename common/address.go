@@ -23,6 +23,13 @@ func (a Address) String() string {
 	return hex.EncodeToString(a.ToSlice())
 }
 
+func (a Address) Equal(address Address) bool {
+	if a.String() == address.String() {
+		return true
+	}
+	return false
+}
+
 func NewAddressFromBytes(b []byte) Address {
 	if len(b) != 20 {
 		msg := fmt.Sprintf("given bytes with length %d should be 32", len(b))

@@ -145,6 +145,9 @@ func (bc *Blockchain) LinkBlock(b *types.Block) error {
 }
 
 func (bc *Blockchain) handleTransaction(tx *types.Transaction) error {
+	if tx.From.Equal(tx.To) {
+		return fmt.Errorf("from and to must be different")
+	}
 
 	fromAccount, err := bc.ReadAccountByAddress(tx.From)
 	if err != nil {

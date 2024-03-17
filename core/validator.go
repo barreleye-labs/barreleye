@@ -38,6 +38,10 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 		return common.ErrBlockKnown
 	}
 
+	if lastBlock.Height+1 < b.Height {
+		return common.ErrBlockTooHigh
+	}
+
 	prevHeader, err := v.bc.ReadHeaderByHeight(b.Height - 1)
 	if err != nil {
 		return err
@@ -64,10 +68,5 @@ func (v *BlockValidator) ValidateBlock(b *types.Block) error {
 		}
 		return common.ErrBlockKnown
 	}
-
-	if lastBlock.Height+1 != b.Height {
-		return common.ErrBlockTooHigh
-	}
-
 	return nil
 }
