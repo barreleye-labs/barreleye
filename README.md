@@ -10,7 +10,7 @@
   <h2>@Barreleye Chain &middot; <img src="https://img.shields.io/badge/Go-1.22-success" alt="go version" height="18"/></h2>
 
   <p align="center">
-   Official open source of <b>Barreleye Blockchain Core. </b>
+   Official open source of <b>Barreleye Blockchain. </b>
 
  
   with initial developer [@Youngmin Kim](https://github.com/k930503), [@Nayoung Kim](https://github.com/usiyoung)
@@ -26,7 +26,7 @@
 
 ### Prerequisites.
 
-Download here [docker.com](https://www.docker.com/products/docker-desktop/).
+Docker download here [docker.com](https://www.docker.com/products/docker-desktop/).
 
 ## **1. Pull Docker Image.**
 Pull the Barreleye Docker image.
@@ -102,9 +102,13 @@ You can connect infinite nodes as shown above. As you can see from the log, node
 <br/>
 
 ## Our projects
+## Explorer & Wallet.
+https://barreleyescan.com
+
+## Our projects.
 ![barreleye-fish-black-24](https://github.com/barreleye-labs/barreleye/assets/48827393/698b04c7-454a-4cb9-8680-ac5647b558fc)&nbsp;&nbsp;&nbsp;[Barreleye](https://github.com/barreleye-labs/barreleye)
 
-![barreleye-fish-black-24](https://github.com/barreleye-labs/barreleye/assets/48827393/698b04c7-454a-4cb9-8680-ac5647b558fc)&nbsp;&nbsp;&nbsp;[Barreleye scan](https://github.com/barreleye-labs/barreleye-explorer-react)
+![barreleye-fish-black-24](https://github.com/barreleye-labs/barreleye/assets/48827393/698b04c7-454a-4cb9-8680-ac5647b558fc)&nbsp;&nbsp;&nbsp;[Barreleyescan](https://github.com/barreleye-labs/barreleye-explorer-react)
 
 <br/>
 
