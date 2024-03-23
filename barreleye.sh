@@ -3,7 +3,7 @@ role="genesis"
 port="4100"
 peers="none"
 httpPort="9000"
-key="a2288db63c7016b815c55c1084c2491b8599834500408ba863ec379895373ae9"
+key=
 hostDataDir="/data/barreleye"
 containerDataDir="/barreleye/barreldb/barreleye"
 
