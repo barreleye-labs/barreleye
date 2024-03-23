@@ -38,8 +38,6 @@ func (TxHasher) Hash(tx *Transaction) common.Hash {
 	to := tx.To.ToSlice()
 	value := util.Uint64ToBytes(tx.Value)
 	data := tx.Data
-	fmt.Println("aaaaaa: ", tx.Value)
-	fmt.Println("aaaaaa: ", value)
 	buf := new(bytes.Buffer)
 	_ = binary.Write(buf, binary.LittleEndian, nonce)
 	_ = binary.Write(buf, binary.LittleEndian, from)
