@@ -12,9 +12,17 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func (s *Server) requestSomeCoin(c echo.Context) error {
+	remainTime, ok := s.faucetLimit[c.RealIP()]
+	if ok {
+		if remainTime > time.Now().Unix() {
+			return c.JSON(http.StatusBadRequest, ResponseBadRequest("faucet time limit"))
+		}
+	}
+
 	payload := &dto.FaucetRequest{}
 	if err := c.Bind(payload); err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid payload "+err.Error()))
@@ -64,6 +72,7 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 		signerDTO,
 		signatureDTO)
 
+	s.faucetLimit[c.RealIP()] = time.Now().Unix() + config.FaucetDelayTime
 	return c.JSON(http.StatusOK, ResponseOk(dto.CreateTransactionResponse(txDTO)))
 }
 
