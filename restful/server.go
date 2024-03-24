@@ -13,9 +13,10 @@ type ServerConfig struct {
 
 type Server struct {
 	ServerConfig
-	txChan     chan *types.Transaction
-	bc         *core.Blockchain
-	privateKey *types.PrivateKey
+	txChan      chan *types.Transaction
+	bc          *core.Blockchain
+	privateKey  *types.PrivateKey
+	faucetLimit map[string]int64 // ip => unix time.
 }
 
 func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transaction, privateKey *types.PrivateKey) *Server {
@@ -24,5 +25,6 @@ func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *types.Transac
 		bc:           bc,
 		txChan:       txChan,
 		privateKey:   privateKey,
+		faucetLimit:  make(map[string]int64),
 	}
 }
