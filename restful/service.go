@@ -33,6 +33,19 @@ func (s *Server) requestSomeCoin(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid AccountAddress "+err.Error()))
 	}
 
+	if len(to) != 20 {
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("invalid address length"))
+	}
+
+	toInfo, err := s.bc.ReadAccountByAddress(common.NewAddressFromBytes(to))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ResponseServerError(err.Error()))
+	}
+
+	if toInfo != nil && toInfo.Balance >= 10 {
+		return c.JSON(http.StatusBadRequest, ResponseBadRequest("The account already has sufficient balance of 10 Barrel or more."))
+	}
+
 	accountNonce, err := s.bc.ReadAccountNonceByAddress(s.privateKey.PublicKey.Address())
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ResponseServerError(err.Error()))
