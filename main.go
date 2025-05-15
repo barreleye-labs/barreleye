@@ -18,6 +18,15 @@ func main() {
 	httpPort := common.GetFlag("http.port")
 	key := common.GetFlag("key")
 
+    fmt.Println("ARGS:", os.Args)
+
+    fmt.Println("key: ", key)
+    fmt.Println("nodeName: ", nodeName)
+    fmt.Println("port: ", port)
+    fmt.Println("peers: ", peers)
+    fmt.Println("httpPort: ", httpPort)
+    fmt.Println("key: ", key)
+
 	peerArr := []string{}
 	if peers != "none" {
 		peerArr = strings.Split(peers, ",")
