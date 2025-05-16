@@ -12,4 +12,4 @@ ADD . /barreleye
 
 RUN cd /barreleye && go build -o ./bin/barreleye
 
-ENTRYPOINT ["/barreleye/bin/barreleye"]
+# ENTRYPOINT ["/barreleye/bin/barreleye"]
