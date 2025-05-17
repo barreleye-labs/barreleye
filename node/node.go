@@ -5,13 +5,14 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/barreleye-labs/barreleye/common"
-	"github.com/barreleye-labs/barreleye/core/types"
 	"math/rand"
 	"net"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/core/types"
 
 	"github.com/barreleye-labs/barreleye/core"
 	"github.com/barreleye-labs/barreleye/restful"
@@ -124,6 +125,7 @@ func (n *Node) checkBlockSyncTimeout() {
 }
 
 func (n *Node) bootstrapNetwork() {
+	fmt.Println("n.SeedNodes", n.SeedNodes)
 	for _, addr := range n.SeedNodes {
 		fmt.Println("trying to connect to ", addr)
 
