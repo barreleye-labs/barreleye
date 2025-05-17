@@ -12,5 +12,4 @@ ADD . /barreleye
 
 RUN cd /barreleye && go build -o ./bin/barreleye
 
-#ENTRYPOINT ["/barreleye/bin/barreleye"]
-#CMD ["-nodeName=$NODENAME"]
+# ENTRYPOINT ["/barreleye/bin/barreleye"]

@@ -1,11 +1,15 @@
 package main
 
+
 import (
 	"github.com/barreleye-labs/barreleye/common"
 	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
 	"strings"
 	"time"
+
+   "fmt"
+    "os"
 
 	"github.com/barreleye-labs/barreleye/node"
 )
@@ -17,6 +21,15 @@ func main() {
 	peers := common.GetFlag("peers")
 	httpPort := common.GetFlag("http.port")
 	key := common.GetFlag("key")
+
+    fmt.Println("ARGS:", os.Args)
+
+    fmt.Println("key: ", key)
+    fmt.Println("nodeName: ", nodeName)
+    fmt.Println("port: ", port)
+    fmt.Println("peers: ", peers)
+    fmt.Println("httpPort: ", httpPort)
+    fmt.Println("key: ", key)
 
 	peerArr := []string{}
 	if peers != "none" {
