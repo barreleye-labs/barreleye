@@ -1,15 +1,15 @@
 package main
 
-
 import (
-	"github.com/barreleye-labs/barreleye/common"
-	"github.com/barreleye-labs/barreleye/core/types"
 	"log"
 	"strings"
 	"time"
 
-   "fmt"
-    "os"
+	"github.com/barreleye-labs/barreleye/common"
+	"github.com/barreleye-labs/barreleye/core/types"
+
+	"fmt"
+	"os"
 
 	"github.com/barreleye-labs/barreleye/node"
 )
@@ -35,6 +35,8 @@ func main() {
 	if peers != "none" {
 		peerArr = strings.Split(peers, ",")
 	}
+	fmt.Println("peers: ", peers)
+	
 
 	/* create hex key
 	nodePrivateKey := types.GeneratePrivateKey()
