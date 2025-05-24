@@ -16,12 +16,12 @@ import (
 )
 
 func (s *Server) requestSomeCoin(c echo.Context) error {
-	remainTime, ok := s.faucetLimit[c.RealIP()]
-	if ok {
-		if remainTime > time.Now().Unix() {
-			return c.JSON(http.StatusBadRequest, ResponseBadRequest("faucet time limit"))
-		}
-	}
+	//remainTime, ok := s.faucetLimit[c.RealIP()]
+	//if ok {
+	//	if remainTime > time.Now().Unix() {
+	//		return c.JSON(http.StatusBadRequest, ResponseBadRequest("faucet time limit"))
+	//	}
+	//}
 
 	payload := &dto.FaucetRequest{}
 	if err := c.Bind(payload); err != nil {
