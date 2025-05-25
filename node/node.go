@@ -175,6 +175,9 @@ free:
 			}
 
 		case rpc := <-n.rpcCh:
+
+			n.mu.Lock()
+
 			msg, err := n.RPCDecodeFunc(rpc)
 			if err != nil {
 				_ = n.Logger.Log("RPC error", err)
@@ -202,6 +205,7 @@ free:
 					}
 				}
 			}
+			n.mu.Unlock()
 
 		case <-n.quitCh:
 			break free
@@ -550,9 +554,6 @@ func (n *Node) sendChainInfoResponseMessage(from net.Addr, height int32) error {
 	if err := gob.NewEncoder(buf).Encode(chainInfoResponseMessage); err != nil {
 		return err
 	}
-
-	n.mu.RLock()
-	defer n.mu.RUnlock()
 
 	peer, ok := n.peerMap[from]
 	if !ok {
