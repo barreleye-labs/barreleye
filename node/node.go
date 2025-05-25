@@ -170,13 +170,12 @@ free:
 			_ = n.Logger.Log("msg", "🙋 connected peer", "peer", peer.conn.RemoteAddr())
 
 		case tx := <-n.txChan:
+
 			if err := n.handleTransaction(tx); err != nil {
 				_ = n.Logger.Log("process TX error", err)
 			}
 
 		case rpc := <-n.rpcCh:
-
-			n.mu.Lock()
 
 			msg, err := n.RPCDecodeFunc(rpc)
 			if err != nil {
@@ -205,7 +204,6 @@ free:
 					}
 				}
 			}
-			n.mu.Unlock()
 
 		case <-n.quitCh:
 			break free
