@@ -175,13 +175,15 @@ free:
 			}
 
 		case rpc := <-n.rpcCh:
+			n.mu.Lock()
+
 			msg, err := n.RPCDecodeFunc(rpc)
 			if err != nil {
 				_ = n.Logger.Log("RPC error", err)
 				continue
 			}
 
-			if err = n.RPCProcessor.HandleMessage(msg); err != nil {
+			if err = n.RPCProcessor.handleMessage(msg); err != nil {
 				if !errors.Is(err, common.ErrBlockKnown) && !errors.Is(err, common.ErrTransactionAlreadyPending) {
 					_ = n.Logger.Log("error", err)
 				}
@@ -202,6 +204,7 @@ free:
 					}
 				}
 			}
+			n.mu.Unlock()
 
 		case <-n.quitCh:
 			break free
@@ -236,7 +239,7 @@ func (n *Node) mine() {
 	}
 }
 
-func (n *Node) HandleMessage(msg *DecodedMessage) error {
+func (n *Node) handleMessage(msg *DecodedMessage) error {
 	switch t := msg.Data.(type) {
 	case *types.Transaction:
 		return n.handleTransaction(t)
@@ -604,8 +607,6 @@ func (n *Node) handleChainInfoResponseMessage(from net.Addr, data *ChainInfoResp
 }
 
 func (n *Node) broadcast(payload []byte) error {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
 	for netAddr, peer := range n.peerMap {
 		if err := peer.Send(payload); err != nil {
 			if err = peer.Close(); err != nil {
