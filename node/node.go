@@ -175,8 +175,6 @@ free:
 			}
 
 		case rpc := <-n.rpcCh:
-			n.mu.Lock()
-
 			msg, err := n.RPCDecodeFunc(rpc)
 			if err != nil {
 				_ = n.Logger.Log("RPC error", err)
@@ -204,7 +202,6 @@ free:
 					}
 				}
 			}
-			n.mu.Unlock()
 
 		case <-n.quitCh:
 			break free
