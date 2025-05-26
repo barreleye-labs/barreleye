@@ -356,9 +356,6 @@ func (n *Node) handleBlockHashRequestMessage(from net.Addr, data *BlockHashReque
 		return err
 	}
 
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-
 	msg := NewMessage(MessageTypeBlockHashResponse, buf.Bytes())
 	peer, ok := n.peerMap[from]
 	if !ok {

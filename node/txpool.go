@@ -81,25 +81,16 @@ func NewTxSortedMap() *TxSortedMap {
 }
 
 func (t *TxSortedMap) First() *types.Transaction {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
 	first := t.txs.Get(0)
 	return t.lookup[first.GetHash()]
 }
 
 func (t *TxSortedMap) Get(h common.Hash) *types.Transaction {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
 	return t.lookup[h]
 }
 
 func (t *TxSortedMap) Add(tx *types.Transaction) {
 	hash := tx.GetHash()
-
-	t.lock.Lock()
-	defer t.lock.Unlock()
 
 	if _, ok := t.lookup[hash]; !ok {
 		t.lookup[hash] = tx
@@ -108,32 +99,20 @@ func (t *TxSortedMap) Add(tx *types.Transaction) {
 }
 
 func (t *TxSortedMap) Remove(h common.Hash) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
 	t.txs.Remove(t.lookup[h])
 	delete(t.lookup, h)
 }
 
 func (t *TxSortedMap) Count() int {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
 	return len(t.lookup)
 }
 
 func (t *TxSortedMap) Contains(h common.Hash) bool {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
 	_, ok := t.lookup[h]
 	return ok
 }
 
 func (t *TxSortedMap) Clear() {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
 	t.lookup = make(map[common.Hash]*types.Transaction)
 	t.txs.Clear()
 }
